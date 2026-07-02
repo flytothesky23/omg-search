@@ -1,6 +1,6 @@
 {
 	"name": "master-of-knowledge-agy",
-	"version": "2.0.36",
+	"version": "2.0.37",
 	"description": "Obsidian knowledge workspace powered by Antigravity CLI OAuth agent workflows",
 	"main": "main.js",
 	"scripts": {
