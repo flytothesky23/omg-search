@@ -83,7 +83,7 @@ export class ChatView extends ItemView {
 	}
 
 	getIcon(): string {
-		return 'brain-circuit';
+		return 'brain';
 	}
 
 	async onOpen() {

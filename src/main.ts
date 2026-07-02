@@ -16,7 +16,9 @@ export default class MokAgyPlugin extends Plugin {
 
 		// Initialize services
 		this.agentService = new AgentService(this);
-		await this.ensureDefaultWorkspaceFolders();
+		this.ensureDefaultWorkspaceFolders().catch(error => {
+			console.warn('Master of Knowledge AGY could not prepare default workspace folders:', error);
+		});
 
 		// Register chat view
 		this.registerView(
@@ -25,7 +27,7 @@ export default class MokAgyPlugin extends Plugin {
 		);
 
 		// Add ribbon icon for chat
-		this.addRibbonIcon('brain-circuit', 'Open Master of Knowledge AGY', () => {
+		this.addRibbonIcon('brain', 'Open Master of Knowledge AGY', () => {
 			this.activateChatView();
 		});
 
@@ -191,8 +193,14 @@ export default class MokAgyPlugin extends Plugin {
 		let current = '';
 		for (const part of parts) {
 			current = current ? `${current}/${part}` : part;
-			if (!this.app.vault.getAbstractFileByPath(current)) {
-				await this.app.vault.createFolder(current);
+			if (!(await this.app.vault.adapter.exists(current))) {
+				try {
+					await this.app.vault.createFolder(current);
+				} catch (error: any) {
+					if (!(await this.app.vault.adapter.exists(current))) {
+						throw error;
+					}
+				}
 			}
 		}
 		return path;

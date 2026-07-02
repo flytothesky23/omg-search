@@ -330,7 +330,7 @@ var ChatView = class extends import_obsidian2.ItemView {
     return "Master of Knowledge";
   }
   getIcon() {
-    return "brain-circuit";
+    return "brain";
   }
   async onOpen() {
     const container = this.containerEl.children[1];
@@ -2714,12 +2714,14 @@ var MokAgyPlugin = class extends import_obsidian4.Plugin {
     console.log("Loading Master of Knowledge AGY Plugin");
     await this.loadSettings();
     this.agentService = new AgentService(this);
-    await this.ensureDefaultWorkspaceFolders();
+    this.ensureDefaultWorkspaceFolders().catch((error) => {
+      console.warn("Master of Knowledge AGY could not prepare default workspace folders:", error);
+    });
     this.registerView(
       CHAT_VIEW_TYPE,
       (leaf) => new ChatView(leaf, this)
     );
-    this.addRibbonIcon("brain-circuit", "Open Master of Knowledge AGY", () => {
+    this.addRibbonIcon("brain", "Open Master of Knowledge AGY", () => {
       this.activateChatView();
     });
     this.addSettingTab(new MokAgySettingTab(this.app, this));
@@ -2847,8 +2849,14 @@ var MokAgyPlugin = class extends import_obsidian4.Plugin {
     let current = "";
     for (const part of parts) {
       current = current ? `${current}/${part}` : part;
-      if (!this.app.vault.getAbstractFileByPath(current)) {
-        await this.app.vault.createFolder(current);
+      if (!await this.app.vault.adapter.exists(current)) {
+        try {
+          await this.app.vault.createFolder(current);
+        } catch (error) {
+          if (!await this.app.vault.adapter.exists(current)) {
+            throw error;
+          }
+        }
       }
     }
     return path;
