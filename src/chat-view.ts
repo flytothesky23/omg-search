@@ -1,17 +1,4 @@
 import { ItemView, WorkspaceLeaf, MarkdownRenderer, Notice, TFile, Modal, FuzzySuggestModal, App } from 'obsidian';
-import { drag } from 'd3-drag';
-import {
-	forceCenter,
-	forceCollide,
-	forceLink,
-	forceManyBody,
-	forceSimulation,
-	forceX,
-	forceY,
-	SimulationNodeDatum
-} from 'd3-force';
-import { select } from 'd3-selection';
-import { zoom, zoomIdentity, ZoomBehavior } from 'd3-zoom';
 import MokAgyPlugin from './main';
 import { ChatMessage, Citation } from './types';
 
@@ -38,30 +25,6 @@ type KnowledgeGraphEdge = {
 	label?: string;
 	confidence: 'EXTRACTED';
 	confidenceScore: number;
-};
-
-type GraphTheme = {
-	type: string;
-	label: string;
-	color: string;
-	glow: string;
-	radius: number;
-};
-
-type GraphPosition = {
-	x: number;
-	y: number;
-	r: number;
-	theme: GraphTheme;
-};
-
-type GraphSimNode = SimulationNodeDatum & {
-	id: string;
-	r: number;
-	community: number;
-	kind: KnowledgeGraphNode['kind'];
-	degree: number;
-	pageRank: number;
 };
 
 // Modal for selecting a note to apply content
@@ -998,12 +961,7 @@ export class ChatView extends ItemView {
 			(options.includeTags || edge.type === 'wikilink')
 		);
 		const edges = this.capGraphEdges(rawEdges, selected, options.includeTags ? 520 : 340, options.includeTags ? 10 : 8);
-		const layout = this.computeForceLayout(
-			selected,
-			edges,
-			container.clientWidth || 1100,
-			container.clientHeight || 640
-		);
+		const layout = this.computeForceLayout(selected, edges, container.clientWidth || 1100, 620);
 		const neighbors = new Map<string, Set<string>>();
 		for (const node of selected) neighbors.set(node.id, new Set());
 		for (const edge of edges) {
@@ -1020,52 +978,10 @@ export class ChatView extends ItemView {
 		const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
 		svg.setAttribute('viewBox', `0 0 ${layout.width} ${layout.height}`);
 		svg.setAttribute('class', 'mok-graph-svg');
+		svg.setAttribute('data-graph-scale', '1');
+		svg.setAttribute('data-graph-x', '0');
+		svg.setAttribute('data-graph-y', '0');
 		container.appendChild(svg);
-
-		const renderId = `${Date.now().toString(36)}-${Math.floor(Math.random() * 100000).toString(36)}`;
-		const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-		svg.appendChild(defs);
-
-		const glowId = `mok-graph-glow-${renderId}`;
-		const glow = document.createElementNS('http://www.w3.org/2000/svg', 'filter');
-		glow.setAttribute('id', glowId);
-		glow.setAttribute('x', '-70%');
-		glow.setAttribute('y', '-70%');
-		glow.setAttribute('width', '240%');
-		glow.setAttribute('height', '240%');
-		const blur = document.createElementNS('http://www.w3.org/2000/svg', 'feGaussianBlur');
-		blur.setAttribute('stdDeviation', '4');
-		blur.setAttribute('result', 'coloredBlur');
-		glow.appendChild(blur);
-		const merge = document.createElementNS('http://www.w3.org/2000/svg', 'feMerge');
-		merge.appendChild(document.createElementNS('http://www.w3.org/2000/svg', 'feMergeNode')).setAttribute('in', 'coloredBlur');
-		merge.appendChild(document.createElementNS('http://www.w3.org/2000/svg', 'feMergeNode')).setAttribute('in', 'SourceGraphic');
-		glow.appendChild(merge);
-		defs.appendChild(glow);
-
-		for (const node of selected) {
-			const pos = layout.positions.get(node.id);
-			if (!pos) continue;
-			const gradient = document.createElementNS('http://www.w3.org/2000/svg', 'radialGradient');
-			gradient.setAttribute('id', `mok-graph-node-${renderId}-${this.graphElementId(node.id)}`);
-			gradient.setAttribute('cx', '35%');
-			gradient.setAttribute('cy', '28%');
-			gradient.setAttribute('r', '75%');
-			const stopA = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
-			stopA.setAttribute('offset', '0%');
-			stopA.setAttribute('stop-color', '#ffffff');
-			stopA.setAttribute('stop-opacity', node.kind === 'tag' ? '0.55' : '0.78');
-			gradient.appendChild(stopA);
-			const stopB = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
-			stopB.setAttribute('offset', '42%');
-			stopB.setAttribute('stop-color', pos.theme.color);
-			gradient.appendChild(stopB);
-			const stopC = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
-			stopC.setAttribute('offset', '100%');
-			stopC.setAttribute('stop-color', pos.theme.glow);
-			gradient.appendChild(stopC);
-			defs.appendChild(gradient);
-		}
 
 		const viewport = document.createElementNS('http://www.w3.org/2000/svg', 'g');
 		viewport.setAttribute('class', 'mok-graph-viewport');
@@ -1080,71 +996,47 @@ export class ChatView extends ItemView {
 		this.attachGraphNavigation(svg, viewport, detailPanel, layout.width, layout.height);
 
 		const nodeElements = new Map<string, SVGElement>();
-		const edgeElements: Array<{ element: SVGPathElement; from: string; to: string; edge: KnowledgeGraphEdge }> = [];
-		const updateEdgePath = (edgeItem: { element: SVGPathElement; from: string; to: string; edge: KnowledgeGraphEdge }) => {
-			const from = layout.positions.get(edgeItem.from);
-			const to = layout.positions.get(edgeItem.to);
-			if (!from || !to) return;
-			edgeItem.element.setAttribute('d', this.graphEdgePath(from, to, edgeItem.edge));
-		};
-		const updateConnectedEdges = (nodeId: string) => {
-			for (const edgeItem of edgeElements) {
-				if (edgeItem.from === nodeId || edgeItem.to === nodeId) updateEdgePath(edgeItem);
-			}
-		};
+		const edgeElements: Array<{ element: SVGElement; from: string; to: string }> = [];
 		for (const edge of edges) {
 			const from = layout.positions.get(edge.from);
 			const to = layout.positions.get(edge.to);
 			if (!from || !to) continue;
-			const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-			path.setAttribute('d', this.graphEdgePath(from, to, edge));
-			path.setAttribute('class', edge.type === 'wikilink' ? 'mok-graph-edge mok-graph-edge-link' : 'mok-graph-edge mok-graph-edge-tag');
-			edgeLayer.appendChild(path);
-			edgeElements.push({ element: path, from: edge.from, to: edge.to, edge });
+			const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+			line.setAttribute('x1', String(from.x));
+			line.setAttribute('y1', String(from.y));
+			line.setAttribute('x2', String(to.x));
+			line.setAttribute('y2', String(to.y));
+			line.setAttribute('class', edge.type === 'wikilink' ? 'mok-graph-edge mok-graph-edge-link' : 'mok-graph-edge');
+			edgeLayer.appendChild(line);
+			edgeElements.push({ element: line, from: edge.from, to: edge.to });
 		}
 
-		const activeFile = this.app.workspace.getActiveFile();
 		for (const node of selected) {
 			const pos = layout.positions.get(node.id);
 			if (!pos) continue;
 			const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
 			const title = node.title || node.path;
 			const isSearchHit = search && title.toLowerCase().includes(search);
-			const isActiveFile = activeFile?.path === node.path;
-			group.setAttribute('class', [
-				'mok-graph-node',
-				isSearchHit ? 'mok-graph-node-search-hit' : '',
-				isActiveFile ? 'mok-graph-node-active' : ''
-			].filter(Boolean).join(' '));
+			group.setAttribute('class', isSearchHit ? 'mok-graph-node mok-graph-node-search-hit' : 'mok-graph-node');
 			group.setAttribute('transform', `translate(${pos.x}, ${pos.y})`);
-
-			const halo = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-			halo.setAttribute('r', String(pos.r + (isActiveFile ? 13 : 8)));
-			halo.setAttribute('class', 'mok-graph-node-halo');
-			halo.setAttribute('fill', pos.theme.glow);
-			group.appendChild(halo);
 
 			const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
 			circle.setAttribute('r', String(pos.r));
-			circle.setAttribute('fill', `url(#mok-graph-node-${renderId}-${this.graphElementId(node.id)})`);
-			circle.setAttribute('stroke', pos.theme.glow);
+			circle.setAttribute('fill', this.communityGraphColor(node.community || 0));
 			circle.setAttribute('data-node-id', node.id);
 			circle.setAttribute('data-node-kind', node.kind);
-			circle.setAttribute('data-node-type', pos.theme.type);
-			circle.setAttribute('filter', node.kind === 'tag' ? '' : `url(#${glowId})`);
 			group.appendChild(circle);
 
-			if (pos.r > 10 || isSearchHit || isActiveFile) {
+			if (pos.r > 12 || isSearchHit) {
 				const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
 				label.setAttribute('y', String(pos.r + 13));
 				label.setAttribute('text-anchor', 'middle');
-				label.setAttribute('class', 'mok-graph-node-label');
-				label.textContent = this.truncateGraphLabel(title, pos.r > 18 ? 22 : 14);
+				label.textContent = this.truncateGraphLabel(title, pos.r > 18 ? 18 : 12);
 				group.appendChild(label);
 			}
 
 			const tooltip = document.createElementNS('http://www.w3.org/2000/svg', 'title');
-			tooltip.textContent = `${title}\n${node.path}\n유형 ${pos.theme.label} · 연결 수 ${node.degree || 0} · PageRank ${Math.round((node.pageRank || 0) * 100)}`;
+			tooltip.textContent = `${title}\n${node.path}\n연결 수 ${node.degree || 0} · PageRank ${Math.round((node.pageRank || 0) * 100)}`;
 			group.appendChild(tooltip);
 
 			group.addEventListener('mouseenter', () => {
@@ -1169,44 +1061,8 @@ export class ChatView extends ItemView {
 				await this.showGraphNodeDetail(detailPanel, node, Array.from(neighbors.get(node.id) || []), selectedById);
 			});
 
-			select(group)
-				.datum(pos)
-				.call(drag<SVGGElement, GraphPosition>()
-					.on('start', function(event) {
-						event.sourceEvent?.stopPropagation();
-						select(this).raise();
-						this.addClass('mok-graph-node-dragging');
-					})
-					.on('drag', (event, dragged) => {
-						dragged.x = event.x;
-						dragged.y = event.y;
-						group.setAttribute('transform', `translate(${dragged.x}, ${dragged.y})`);
-						updateConnectedEdges(node.id);
-					})
-					.on('end', function(event, dragged) {
-						event.sourceEvent?.stopPropagation();
-						dragged.x = Math.max(32, Math.min(layout.width - 32, dragged.x));
-						dragged.y = Math.max(32, Math.min(layout.height - 32, dragged.y));
-						group.setAttribute('transform', `translate(${dragged.x}, ${dragged.y})`);
-						updateConnectedEdges(node.id);
-						this.removeClass('mok-graph-node-dragging');
-					}));
-
 			nodeLayer.appendChild(group);
 			nodeElements.set(node.id, group);
-		}
-
-		const legendThemes = Array.from(new Map(selected.map(node => {
-			const theme = layout.positions.get(node.id)?.theme || this.graphNodeTheme(node);
-			return [theme.type, theme] as const;
-		})).values()).slice(0, 8);
-		const legend = container.createDiv({ cls: 'mok-graph-legend' });
-		legend.createEl('strong', { text: '노드 유형' });
-		for (const theme of legendThemes) {
-			const item = legend.createSpan({ cls: 'mok-graph-legend-item' });
-			item.style.setProperty('--mok-legend-color', theme.color);
-			item.createSpan({ cls: 'mok-graph-legend-dot' });
-			item.createSpan({ text: theme.label });
 		}
 
 		svg.addEventListener('click', (event) => {
@@ -1215,37 +1071,110 @@ export class ChatView extends ItemView {
 	}
 
 	private attachGraphNavigation(svg: SVGSVGElement, viewport: SVGGElement, detailPanel: HTMLElement, width: number, height: number) {
-		const zoomBehavior = zoom<SVGSVGElement, unknown>()
-			.scaleExtent([0.28, 4.8])
-			.translateExtent([[-width * 0.35, -height * 0.35], [width * 1.35, height * 1.35]])
-			.on('start', () => svg.addClass('mok-graph-panning'))
-			.on('zoom', (event) => {
-				detailPanel.addClass('mok-graph-detail-hidden');
-				viewport.setAttribute('transform', event.transform.toString());
-				svg.dataset.graphScale = String(event.transform.k);
-				svg.dataset.graphX = String(event.transform.x);
-				svg.dataset.graphY = String(event.transform.y);
-			})
-			.on('end', () => svg.removeClass('mok-graph-panning'));
+		let isPanning = false;
+		let last: { x: number; y: number } | null = null;
+		const getState = () => ({
+			scale: Number(svg.dataset.graphScale || '1'),
+			x: Number(svg.dataset.graphX || '0'),
+			y: Number(svg.dataset.graphY || '0')
+		});
+		const apply = (state: { scale: number; x: number; y: number }) => {
+			svg.dataset.graphScale = String(state.scale);
+			svg.dataset.graphX = String(state.x);
+			svg.dataset.graphY = String(state.y);
+			viewport.setAttribute('transform', `translate(${state.x} ${state.y}) scale(${state.scale})`);
+		};
+		const point = (event: MouseEvent | WheelEvent | PointerEvent) => {
+			const rect = svg.getBoundingClientRect();
+			return {
+				x: ((event.clientX - rect.left) / Math.max(rect.width, 1)) * width,
+				y: ((event.clientY - rect.top) / Math.max(rect.height, 1)) * height
+			};
+		};
+		const zoomAt = (factor: number, cx: number, cy: number) => {
+			const current = getState();
+			const nextScale = Math.max(0.35, Math.min(4, current.scale * factor));
+			const ratio = nextScale / current.scale;
+			apply({
+				scale: nextScale,
+				x: cx - (cx - current.x) * ratio,
+				y: cy - (cy - current.y) * ratio
+			});
+		};
 
-		(svg as SVGSVGElement & { __mokGraphZoom?: ZoomBehavior<SVGSVGElement, unknown> }).__mokGraphZoom = zoomBehavior;
-		select(svg).call(zoomBehavior).on('dblclick.zoom', null);
+		svg.addEventListener('wheel', (event) => {
+			event.preventDefault();
+			const p = point(event);
+			zoomAt(event.deltaY < 0 ? 1.12 : 0.89, p.x, p.y);
+		}, { passive: false });
+		svg.addEventListener('pointerdown', (event) => {
+			const target = event.target as Element;
+			if (target.closest('.mok-graph-node') || target.closest('.mok-graph-detail')) return;
+			isPanning = true;
+			last = point(event);
+			detailPanel.addClass('mok-graph-detail-hidden');
+			svg.addClass('mok-graph-panning');
+			svg.setPointerCapture(event.pointerId);
+		});
+		svg.addEventListener('pointermove', (event) => {
+			if (!isPanning || !last) return;
+			const p = point(event);
+			const state = getState();
+			apply({
+				scale: state.scale,
+				x: state.x + p.x - last.x,
+				y: state.y + p.y - last.y
+			});
+			last = p;
+		});
+		const stopPan = (event: PointerEvent) => {
+			if (!isPanning) return;
+			isPanning = false;
+			last = null;
+			svg.removeClass('mok-graph-panning');
+			try {
+				svg.releasePointerCapture(event.pointerId);
+			} catch {
+				// Pointer capture may already be released by the browser.
+			}
+		};
+		svg.addEventListener('pointerup', stopPan);
+		svg.addEventListener('pointercancel', stopPan);
 	}
 
 	private zoomGraph(container: HTMLElement, factor: number) {
 		const svg = container.querySelector('.mok-graph-svg') as SVGSVGElement | null;
-		if (!svg) return;
-		const zoomBehavior = (svg as SVGSVGElement & { __mokGraphZoom?: ZoomBehavior<SVGSVGElement, unknown> }).__mokGraphZoom;
-		if (!zoomBehavior) return;
-		select(svg).call(zoomBehavior.scaleBy, factor);
+		const viewport = container.querySelector('.mok-graph-viewport') as SVGGElement | null;
+		if (!svg || !viewport) return;
+		const viewBox = svg.viewBox.baseVal;
+		const current = {
+			scale: Number(svg.dataset.graphScale || '1'),
+			x: Number(svg.dataset.graphX || '0'),
+			y: Number(svg.dataset.graphY || '0')
+		};
+		const cx = viewBox.width / 2;
+		const cy = viewBox.height / 2;
+		const nextScale = Math.max(0.35, Math.min(4, current.scale * factor));
+		const ratio = nextScale / current.scale;
+		const next = {
+			scale: nextScale,
+			x: cx - (cx - current.x) * ratio,
+			y: cy - (cy - current.y) * ratio
+		};
+		svg.dataset.graphScale = String(next.scale);
+		svg.dataset.graphX = String(next.x);
+		svg.dataset.graphY = String(next.y);
+		viewport.setAttribute('transform', `translate(${next.x} ${next.y}) scale(${next.scale})`);
 	}
 
 	private resetGraphZoom(container: HTMLElement) {
 		const svg = container.querySelector('.mok-graph-svg') as SVGSVGElement | null;
-		if (!svg) return;
-		const zoomBehavior = (svg as SVGSVGElement & { __mokGraphZoom?: ZoomBehavior<SVGSVGElement, unknown> }).__mokGraphZoom;
-		if (!zoomBehavior) return;
-		select(svg).call(zoomBehavior.transform, zoomIdentity);
+		const viewport = container.querySelector('.mok-graph-viewport') as SVGGElement | null;
+		if (!svg || !viewport) return;
+		svg.dataset.graphScale = '1';
+		svg.dataset.graphX = '0';
+		svg.dataset.graphY = '0';
+		viewport.setAttribute('transform', 'translate(0 0) scale(1)');
 	}
 
 	private async showGraphNodeDetail(
@@ -1353,12 +1282,10 @@ export class ChatView extends ItemView {
 		edges: KnowledgeGraphEdge[],
 		width: number,
 		height: number
-	): { width: number; height: number; positions: Map<string, GraphPosition> } {
+	): { width: number; height: number; positions: Map<string, { x: number; y: number; r: number }> } {
 		const safeWidth = Math.max(width, 900);
 		const safeHeight = Math.max(height, 560);
-		const positions = new Map<string, GraphPosition>();
-		if (nodes.length === 0) return { width: safeWidth, height: safeHeight, positions };
-
+		const positions = new Map<string, { x: number; y: number; vx: number; vy: number; r: number; community: number }>();
 		const communities = Array.from(new Set(nodes.map(node => node.community || 0))).sort((a, b) => a - b);
 		const centerByCommunity = new Map<number, { x: number; y: number }>();
 		const communityCounts = new Map<number, number>();
@@ -1381,126 +1308,102 @@ export class ChatView extends ItemView {
 			void index;
 		});
 
-		const simNodes: GraphSimNode[] = nodes.map((node, index) => {
-			const theme = this.graphNodeTheme(node);
+		nodes.forEach((node, index) => {
 			const community = node.community || 0;
 			const center = centerByCommunity.get(community) || { x: safeWidth / 2, y: safeHeight / 2 };
 			const seed = this.graphSeed(node.id);
 			const angle = seed * Math.PI * 2;
-			const radius = 34 + ((index % 17) * 9);
+			const radius = 26 + ((index % 13) * 7);
 			const nodeRadius = node.kind === 'tag'
-				? theme.radius + Math.min(node.degree || 0, 35) * 0.12
-				: theme.radius + Math.sqrt(Math.max(0, node.pageRank || 0)) * 13 + Math.min(node.degree || 0, 45) * 0.1;
-			return {
-				id: node.id,
+				? 7 + Math.min(node.degree || 0, 35) * 0.16
+				: 6 + Math.sqrt(Math.max(0, node.pageRank || 0)) * 20 + Math.min(node.degree || 0, 40) * 0.12;
+			positions.set(node.id, {
 				x: center.x + Math.cos(angle) * radius,
 				y: center.y + Math.sin(angle) * radius,
-				r: Math.max(5, Math.min(node.kind === 'tag' ? 14 : 30, nodeRadius)),
-				community,
-				kind: node.kind,
-				degree: node.degree || 0,
-				pageRank: node.pageRank || 0
-			};
+				vx: 0,
+				vy: 0,
+				r: Math.max(5, Math.min(26, nodeRadius)),
+				community
+			});
 		});
 
-		const simNodeIds = new Set(simNodes.map(node => node.id));
 		const visibleEdges = edges
-			.filter(edge => simNodeIds.has(edge.from) && simNodeIds.has(edge.to))
-			.slice(0, 560)
-			.map(edge => ({ source: edge.from, target: edge.to, edge }));
+			.filter(edge => positions.has(edge.from) && positions.has(edge.to))
+			.slice(0, 420);
+		for (let iter = 0; iter < 180; iter++) {
+			const alpha = 1 - iter / 180;
+			for (let i = 0; i < nodes.length; i++) {
+				const a = positions.get(nodes[i].id);
+				if (!a) continue;
+				for (let j = i + 1; j < nodes.length; j++) {
+					const b = positions.get(nodes[j].id);
+					if (!b) continue;
+					const dx = a.x - b.x;
+					const dy = a.y - b.y;
+					const distSq = Math.max(dx * dx + dy * dy, 220);
+					const force = (a.community === b.community ? 320 : 620) / distSq;
+					const fx = dx * force * alpha;
+					const fy = dy * force * alpha;
+					a.vx += fx;
+					a.vy += fy;
+					b.vx -= fx;
+					b.vy -= fy;
+				}
+			}
+			for (const edge of visibleEdges) {
+				const a = positions.get(edge.from);
+				const b = positions.get(edge.to);
+				if (!a || !b) continue;
+				const dx = b.x - a.x;
+				const dy = b.y - a.y;
+				const dist = Math.max(Math.sqrt(dx * dx + dy * dy), 1);
+				const desired = edge.type === 'wikilink' ? 105 : 150;
+				const force = (dist - desired) * (edge.type === 'wikilink' ? 0.006 : 0.003) * alpha;
+				const fx = (dx / dist) * force;
+				const fy = (dy / dist) * force;
+				a.vx += fx;
+				a.vy += fy;
+				b.vx -= fx;
+				b.vy -= fy;
+			}
+			for (const item of positions.values()) {
+				const center = centerByCommunity.get(item.community) || { x: safeWidth / 2, y: safeHeight / 2 };
+				item.vx += (center.x - item.x) * 0.009 * alpha;
+				item.vy += (center.y - item.y) * 0.009 * alpha;
+				item.vx += (safeWidth / 2 - item.x) * 0.0025 * alpha;
+				item.vy += (safeHeight / 2 - item.y) * 0.0025 * alpha;
+				item.x += item.vx;
+				item.y += item.vy;
+				item.vx *= 0.72;
+				item.vy *= 0.72;
+			}
+		}
 
-		const simulation = forceSimulation<GraphSimNode>(simNodes)
-			.force('link', forceLink<GraphSimNode, any>(visibleEdges)
-				.id(node => node.id)
-				.distance(link => link.edge.type === 'tag' ? 138 : 104)
-				.strength(link => link.edge.type === 'tag' ? 0.16 : 0.38))
-			.force('charge', forceManyBody<GraphSimNode>()
-				.strength(node => node.kind === 'tag'
-					? -160 - Math.min(node.degree, 25) * 5
-					: -330 - Math.min(node.degree, 45) * 8))
-			.force('collide', forceCollide<GraphSimNode>()
-				.radius(node => node.r + (node.kind === 'tag' ? 13 : 18))
-				.iterations(3))
-			.force('center', forceCenter(safeWidth / 2, safeHeight / 2))
-			.force('x', forceX<GraphSimNode>(node => (centerByCommunity.get(node.community)?.x || safeWidth / 2))
-				.strength(node => node.kind === 'tag' ? 0.035 : 0.065))
-			.force('y', forceY<GraphSimNode>(node => (centerByCommunity.get(node.community)?.y || safeHeight / 2))
-				.strength(node => node.kind === 'tag' ? 0.035 : 0.065))
-			.stop();
-
-		for (let i = 0; i < 300; i++) simulation.tick();
-
-		const raw = simNodes.map(node => ({
-			id: node.id,
-			x: typeof node.x === 'number' ? node.x : safeWidth / 2,
-			y: typeof node.y === 'number' ? node.y : safeHeight / 2,
-			r: node.r
-		}));
+		const output = new Map<string, { x: number; y: number; r: number }>();
+		const raw = Array.from(positions.values());
 		const minX = Math.min(...raw.map(item => item.x - item.r));
 		const maxX = Math.max(...raw.map(item => item.x + item.r));
 		const minY = Math.min(...raw.map(item => item.y - item.r));
 		const maxY = Math.max(...raw.map(item => item.y + item.r));
-		const padding = 74;
+		const padding = 58;
 		const scale = Math.min(
 			(safeWidth - padding * 2) / Math.max(maxX - minX, 1),
 			(safeHeight - padding * 2) / Math.max(maxY - minY, 1),
-			1.18
+			1.25
 		);
-		const nodeById = new Map(nodes.map(node => [node.id, node]));
-		for (const item of raw) {
-			const node = nodeById.get(item.id);
-			if (!node) continue;
-			positions.set(item.id, {
+		for (const [id, item] of positions.entries()) {
+			output.set(id, {
 				x: padding + (item.x - minX) * scale,
 				y: padding + (item.y - minY) * scale,
-				r: item.r,
-				theme: this.graphNodeTheme(node)
+				r: item.r
 			});
 		}
-		return { width: safeWidth, height: safeHeight, positions };
+		return { width: safeWidth, height: safeHeight, positions: output };
 	}
 
-	private graphNodeTheme(node: KnowledgeGraphNode): GraphTheme {
-		const themes: Record<string, GraphTheme> = {
-			project: { type: 'project', label: '프로젝트', color: '#b45309', glow: '#f59e0b', radius: 9 },
-			company: { type: 'company', label: '회사/거래처', color: '#5b21b6', glow: '#8b5cf6', radius: 9 },
-			person: { type: 'person', label: '사람', color: '#6d28d9', glow: '#a78bfa', radius: 8 },
-			standard: { type: 'standard', label: '기준정보', color: '#047857', glow: '#10b981', radius: 8 },
-			legal: { type: 'legal', label: '법무/리서치', color: '#9f1239', glow: '#f43f5e', radius: 8 },
-			meeting: { type: 'meeting', label: '회의/보고', color: '#0284c7', glow: '#38bdf8', radius: 7 },
-			field: { type: 'field', label: '업무기록', color: '#475569', glow: '#cbd5e1', radius: 7 },
-			tag: { type: 'tag', label: '태그', color: '#334155', glow: '#94a3b8', radius: 6 },
-			note: { type: 'note', label: '문맥 노트', color: '#4338ca', glow: '#6366f1', radius: 7 }
-		};
-		if (node.kind === 'tag') return themes.tag;
-		const text = `${node.title} ${node.folder} ${node.path}`.toLowerCase();
-		if (/uneco|유네코|에코그릿|회사|거래처|협력사|고객사/.test(text)) return themes.company;
-		if (/^[가-힣]{2,4}$/.test(node.title) || /대표|이사|팀장|대리|부장|과장|담당|인물|사람/.test(text)) return themes.person;
-		if (/프로젝트|사업|공사|현장|계약|구매|영업/.test(text)) return themes.project;
-		if (/기준정보|표준|규격|인증|시스템|관리체계|원칙|프로세스/.test(text)) return themes.standard;
-		if (/법령|판례|헌법|법무|리서치|조사|검토|분석|research|legal/.test(text)) return themes.legal;
-		if (/회의|회의록|안건|보고|주간|월간|정기|minutes/.test(text)) return themes.meeting;
-		if (/업무일지|작업|로그|기록|source|수집함/.test(text)) return themes.field;
-		return themes.note;
-	}
-
-	private graphEdgePath(from: GraphPosition, to: GraphPosition, edge: KnowledgeGraphEdge): string {
-		const dx = to.x - from.x;
-		const dy = to.y - from.y;
-		const distance = Math.max(Math.sqrt(dx * dx + dy * dy), 1);
-		const sx = from.x + (dx / distance) * (from.r + 3);
-		const sy = from.y + (dy / distance) * (from.r + 3);
-		const tx = to.x - (dx / distance) * (to.r + 3);
-		const ty = to.y - (dy / distance) * (to.r + 3);
-		const bend = Math.min(edge.type === 'tag' ? 58 : 36, distance * (edge.type === 'tag' ? 0.16 : 0.08));
-		const sign = this.graphSeed(edge.id) > 0.5 ? 1 : -1;
-		const cx = (sx + tx) / 2 + (-dy / distance) * bend * sign;
-		const cy = (sy + ty) / 2 + (dx / distance) * bend * sign;
-		return `M ${sx.toFixed(1)} ${sy.toFixed(1)} Q ${cx.toFixed(1)} ${cy.toFixed(1)} ${tx.toFixed(1)} ${ty.toFixed(1)}`;
-	}
-
-	private graphElementId(value: string): string {
-		return Math.floor(this.graphSeed(value) * 1000000000).toString(36);
+	private communityGraphColor(community: number): string {
+		const colors = ['#6366f1', '#10b981', '#f59e0b', '#ec4899', '#06b6d4', '#8b5cf6', '#ef4444', '#84cc16', '#14b8a6', '#f97316', '#a855f7', '#22c55e'];
+		return colors[Math.abs(community) % colors.length];
 	}
 
 	private graphSeed(value: string): number {
