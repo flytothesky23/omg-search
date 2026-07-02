@@ -233,9 +233,11 @@
 	border-radius: 8px;
 	overflow: hidden;
 	background:
-		radial-gradient(circle at center, rgba(255, 255, 255, 0.055) 0 1px, transparent 1px 100%),
+		linear-gradient(135deg, rgba(99, 102, 241, 0.08), transparent 38%),
+		radial-gradient(circle at 70% 24%, rgba(16, 185, 129, 0.1), transparent 30%),
+		radial-gradient(circle at center, rgba(148, 163, 184, 0.12) 0 1px, transparent 1px 100%),
 		var(--background-primary);
-	background-size: 18px 18px;
+	background-size: 100% 100%, 100% 100%, 18px 18px, 100% 100%;
 }
 
 .mok-graph-detail {
@@ -366,19 +368,27 @@
 }
 
 .mok-graph-edge {
-	stroke: rgba(200, 205, 230, 0.5);
-	stroke-width: 1.25;
+	fill: none;
+	stroke: color-mix(in srgb, var(--text-muted) 36%, transparent);
+	stroke-width: 1.15;
+	stroke-linecap: round;
 	transition: opacity 160ms ease, stroke 160ms ease, stroke-width 160ms ease;
 	vector-effect: non-scaling-stroke;
 }
 
 .mok-graph-edge-link {
-	stroke: rgba(220, 225, 250, 0.62);
+	stroke: color-mix(in srgb, var(--text-accent) 40%, var(--text-muted) 30%);
+	opacity: 0.62;
+}
+
+.mok-graph-edge-tag {
+	stroke-dasharray: 5 5;
+	opacity: 0.45;
 }
 
 .mok-graph-edge-highlight {
-	stroke: #ffd24b;
-	stroke-width: 2.4;
+	stroke: #f59e0b;
+	stroke-width: 2.6;
 	opacity: 1;
 }
 
@@ -387,36 +397,93 @@
 	transition: opacity 160ms ease;
 }
 
+.mok-graph-node-halo {
+	opacity: 0.13;
+	pointer-events: none;
+	transition: opacity 160ms ease, transform 160ms ease;
+}
+
 .mok-graph-node circle {
-	stroke: rgba(255, 255, 255, 0.78);
-	stroke-width: 1.6;
-	filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.35));
+	stroke-width: 1.8;
+	filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.28));
 	transition: stroke 160ms ease, stroke-width 160ms ease, opacity 160ms ease;
 }
 
 .mok-graph-node circle[data-node-kind="tag"] {
 	stroke-dasharray: 4 3;
+	filter: none;
+	opacity: 0.76;
 }
 
 .mok-graph-node:hover circle,
-.mok-graph-node-search-hit circle {
+.mok-graph-node-search-hit circle,
+.mok-graph-node-active circle,
+.mok-graph-node-dragging circle {
 	stroke: var(--text-accent);
-	stroke-width: 3.5;
+	stroke-width: 3.2;
+}
+
+.mok-graph-node:hover .mok-graph-node-halo,
+.mok-graph-node-search-hit .mok-graph-node-halo,
+.mok-graph-node-active .mok-graph-node-halo,
+.mok-graph-node-dragging .mok-graph-node-halo {
+	opacity: 0.28;
 }
 
 .mok-graph-node text {
 	fill: var(--text-normal);
-	font-size: 10px;
-	font-weight: 650;
+	font-size: 10.5px;
+	font-weight: 700;
 	paint-order: stroke;
 	stroke: var(--background-primary);
-	stroke-width: 4px;
+	stroke-width: 4.5px;
 	stroke-linejoin: round;
 	pointer-events: none;
+	letter-spacing: 0;
 }
 
 .mok-graph-faded {
-	opacity: 0.13;
+	opacity: 0.16;
+}
+
+.mok-graph-legend {
+	position: absolute;
+	left: 14px;
+	bottom: 14px;
+	z-index: 4;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+	max-width: min(720px, calc(100% - 28px));
+	padding: 9px 10px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	background: color-mix(in srgb, var(--background-secondary) 90%, transparent);
+	backdrop-filter: blur(8px);
+	box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+	color: var(--text-muted);
+	font-size: 11px;
+}
+
+.mok-graph-legend strong {
+	color: var(--text-normal);
+	font-size: 11px;
+}
+
+.mok-graph-legend-item {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	white-space: nowrap;
+}
+
+.mok-graph-legend-dot {
+	width: 9px;
+	height: 9px;
+	border-radius: 50%;
+	background: var(--mok-legend-color);
+	box-shadow: 0 0 10px color-mix(in srgb, var(--mok-legend-color) 70%, transparent);
 }
 
 /* ==================== Chat Header ==================== */
