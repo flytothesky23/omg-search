@@ -1,8 +1,8 @@
 import { ItemView, WorkspaceLeaf, MarkdownRenderer, Notice, TFile, Modal, FuzzySuggestModal, App } from 'obsidian';
-import GeminiSyncPlugin from './main';
-import { ChatMessage, Citation } from './gemini-service';
+import MokAgyPlugin from './main';
+import { ChatMessage, Citation } from './types';
 
-type DashboardTab = 'chat' | 'agent' | 'budget' | 'workspace' | 'graph' | 'settings';
+type DashboardTab = 'agent' | 'workspace' | 'graph' | 'settings';
 
 type KnowledgeGraphNode = {
 	id: string;
@@ -53,12 +53,11 @@ class NoteSelectorModal extends FuzzySuggestModal<TFile> {
 export const CHAT_VIEW_TYPE = 'gemini-chat-view';
 
 export class ChatView extends ItemView {
-	private plugin: GeminiSyncPlugin;
+	private plugin: MokAgyPlugin;
 	private messagesContainer: HTMLElement;
 	private inputContainer: HTMLElement;
 	private inputEl: HTMLTextAreaElement;
 	private sendButton: HTMLButtonElement;
-	private messages: ChatMessage[] = [];
 	private agentMessages: ChatMessage[] = [];
 	private isLoading: boolean = false;
 	private loadingTab: DashboardTab | null = null;
@@ -67,10 +66,10 @@ export class ChatView extends ItemView {
 	private welcomeEl: HTMLElement | null = null;
 	private tabBarEl: HTMLElement;
 	private dashboardContentEl: HTMLElement;
-	private activeTab: DashboardTab = 'chat';
+	private activeTab: DashboardTab = 'agent';
 	private citationPreviewEl: HTMLElement | null = null;
 
-	constructor(leaf: WorkspaceLeaf, plugin: GeminiSyncPlugin) {
+	constructor(leaf: WorkspaceLeaf, plugin: MokAgyPlugin) {
 		super(leaf);
 		this.plugin = plugin;
 	}
@@ -94,7 +93,7 @@ export class ChatView extends ItemView {
 
 		// Header
 		const header = container.createDiv({ cls: 'gemini-chat-header' });
-		header.createEl('h4', { text: 'Master of Knowledge' });
+		header.createEl('h4', { text: 'Master of Knowledge AGY' });
 
 		const headerActions = header.createDiv({ cls: 'gemini-chat-header-actions' });
 
@@ -106,10 +105,10 @@ export class ChatView extends ItemView {
 		clearBtn.addEventListener('click', () => this.clearChat());
 
 		// Sync status indicator
-		const stats = this.plugin.syncEngine.getStats();
+		const contextCount = this.plugin.getKnowledgeMarkdownFiles().length;
 		this.syncStatusEl = headerActions.createEl('span', {
 			cls: 'gemini-chat-sync-status',
-			text: `📚 ${stats.synced} notes synced`
+			text: `📚 ${contextCount} context notes`
 		});
 
 		this.tabBarEl = container.createDiv({ cls: 'mok-tabs' });
@@ -124,11 +123,11 @@ export class ChatView extends ItemView {
 
 	// Public method to update sync status - can be called from outside
 	updateSyncStatus() {
-		const stats = this.plugin.syncEngine.getStats();
+		const contextCount = this.plugin.getKnowledgeMarkdownFiles().length;
 
 		// Update header sync status
 		if (this.syncStatusEl) {
-			this.syncStatusEl.textContent = `📚 ${stats.synced} notes synced`;
+			this.syncStatusEl.textContent = `📚 ${contextCount} context notes`;
 		}
 
 		// Update welcome message warning
@@ -139,14 +138,14 @@ export class ChatView extends ItemView {
 				existingWarning.remove();
 			}
 
-			// Add warning if no notes are synced
-			if (stats.synced === 0) {
+			// Add warning if no local context notes are selected.
+			if (contextCount === 0) {
 				// Find the position to insert warning (after the main description)
 				const paragraphs = this.welcomeEl.querySelectorAll('p');
 				if (paragraphs.length > 0) {
 					const warningEl = this.welcomeEl.createEl('p', {
 						cls: 'gemini-chat-welcome-warning',
-						text: '⚠️ No notes synced yet. Configure sync in settings to get started.'
+						text: '⚠️ No context notes selected yet. Choose context folders in settings to load note excerpts into Agent runs.'
 					});
 					// Insert after first paragraph
 					paragraphs[0].after(warningEl);
@@ -158,9 +157,7 @@ export class ChatView extends ItemView {
 	private renderTabs() {
 		this.tabBarEl.empty();
 		const tabs: Array<{ id: DashboardTab; label: string }> = [
-			{ id: 'chat', label: 'Chat' },
 			{ id: 'agent', label: 'Agent' },
-			{ id: 'budget', label: 'Budget' },
 			{ id: 'workspace', label: '_omg' },
 			{ id: 'graph', label: 'Graph' },
 			{ id: 'settings', label: 'Settings' }
@@ -183,11 +180,6 @@ export class ChatView extends ItemView {
 		this.dashboardContentEl.empty();
 		this.welcomeEl = null;
 
-		if (this.activeTab === 'budget') {
-			this.renderBudgetTab();
-			return;
-		}
-
 		if (this.activeTab === 'workspace') {
 			this.renderWorkspaceTab();
 			return;
@@ -205,7 +197,7 @@ export class ChatView extends ItemView {
 
 		this.renderConversationToolbar();
 		this.messagesContainer = this.dashboardContentEl.createDiv({ cls: 'gemini-chat-messages' });
-		const list = this.activeTab === 'agent' ? this.agentMessages : this.messages;
+		const list = this.agentMessages;
 		if (list.length === 0) {
 			this.showWelcomeMessage();
 		} else {
@@ -276,41 +268,23 @@ export class ChatView extends ItemView {
 		const toolbar = this.dashboardContentEl.createDiv({ cls: 'mok-conversation-toolbar' });
 		const title = toolbar.createDiv({ cls: 'mok-conversation-title' });
 		title.createEl('span', {
-			text: this.activeTab === 'agent' ? 'Agent conversation' : 'Chat conversation'
+			text: 'Agent conversation'
 		});
 		title.createEl('small', {
-			text: this.activeTab === 'agent'
-				? 'Start a fresh Agent run without clearing Chat.'
-				: 'Start a fresh note chat without clearing Agent results.'
+			text: 'Start a fresh Agent run without clearing saved results.'
 		});
 
 		const newButton = toolbar.createEl('button', {
 			cls: 'mok-new-conversation-btn',
-			text: this.activeTab === 'agent' ? '+ New agent chat' : '+ New chat'
+			text: '+ New agent chat'
 		});
 		const isRunningHere = this.isLoading && this.loadingTab === this.activeTab;
 		newButton.disabled = isRunningHere;
-		newButton.setAttr('aria-label', this.activeTab === 'agent' ? 'Start new Agent chat' : 'Start new Chat');
+		newButton.setAttr('aria-label', 'Start new Agent chat');
 		if (isRunningHere) {
 			newButton.setAttr('title', 'Stop the current run before starting a new conversation.');
 		}
 		newButton.addEventListener('click', () => this.startNewConversation());
-	}
-
-	private renderBudgetTab() {
-		const panel = this.dashboardContentEl.createDiv({ cls: 'mok-panel' });
-		panel.createEl('h3', { text: 'Budget Guard' });
-		const budget = this.plugin.settings.monthlyBudgetUsd;
-		const used = this.plugin.settings.estimatedMonthlySpendUsd;
-		const month = this.plugin.settings.estimatedMonthlySpendMonth || this.plugin.getCurrentBudgetMonth();
-		const pctValue = budget > 0 ? Math.min(100, (used / budget) * 100) : 0;
-		const pctLabel = pctValue > 0 && pctValue < 1 ? pctValue.toFixed(2) : String(Math.round(pctValue));
-		panel.createEl('p', { text: `Estimated ${month} usage: $${used.toFixed(4)} / $${budget.toFixed(2)} (${pctLabel}%)` });
-		const meter = panel.createDiv({ cls: 'mok-budget-meter' });
-		meter.createDiv({ cls: 'mok-budget-fill' }).style.width = `${pctValue}%`;
-		panel.createEl('p', { text: `Gemini API log: ${this.plugin.settings.workspaceFolder}/logs/budget-${month}.jsonl` });
-		panel.createEl('p', { text: 'Cost is an estimate from Gemini token metadata when available. Agent/Antigravity CLI runs are not counted because they do not use this plugin API key.' });
-		panel.createEl('p', { text: 'Default policy: Flash-Lite for classification, Flash for answers, Pro only after manual approval.' });
 	}
 
 	private renderWorkspaceTab() {
@@ -332,7 +306,7 @@ export class ChatView extends ItemView {
 		const createBtn = panel.createEl('button', { cls: 'gemini-chat-action-btn', text: 'Create workspace folders' });
 		createBtn.addEventListener('click', async () => {
 			for (const folder of folders) await this.plugin.ensureVaultFolder(folder);
-			new Notice('Master of Knowledge workspace folders are ready.');
+			new Notice('Master of Knowledge AGY workspace folders are ready.');
 			this.renderActiveTab();
 		});
 
@@ -425,7 +399,7 @@ export class ChatView extends ItemView {
 			generatedAt: new Date().toISOString(),
 			vault: this.plugin.getVaultPath(),
 			syncFolders: this.plugin.settings.syncFolders,
-			description: 'Graphify-lite vault graph built from synced Obsidian wikilinks and tags. Edges are deterministic EXTRACTED links, not LLM-inferred semantic relations.',
+			description: 'Graphify-lite vault graph built from local context Obsidian wikilinks and tags. Edges are deterministic EXTRACTED links, not LLM-inferred semantic relations.',
 			metrics: {
 				nodes: allNodes.length,
 				noteNodes: nodes.length,
@@ -618,7 +592,7 @@ export class ChatView extends ItemView {
 			text: [
 				'Master of Knowledge Graph',
 				'Community groups are ranked by PageRank and degree. Large cards are local hubs. Tag Bridges show cross-cutting tags.',
-				'This canvas intentionally shows the most meaningful nodes, not every synced note.'
+				'This canvas intentionally shows the most meaningful nodes, not every context note.'
 			].join('\n')
 		});
 		return { nodes: canvasNodes, edges: canvasEdges };
@@ -793,14 +767,14 @@ export class ChatView extends ItemView {
 			'',
 			'## Method',
 			'',
-			'- Source corpus: only notes selected by Sync Folders.',
+			'- Source corpus: only notes selected by Agent Context Folders.',
 			'- Edges: Obsidian wikilinks and tags only.',
 			'- Confidence: all edges are marked EXTRACTED because they come from explicit note syntax.',
 			'- Analytics: lightweight PageRank and Label Propagation community detection inspired by Alda graphify.',
 			'',
 			'## Hub Nodes',
 			'',
-			hubLines.length ? hubLines.join('\n') : '- No connected hubs yet. Add wikilinks or tags between synced notes.',
+			hubLines.length ? hubLines.join('\n') : '- No connected hubs yet. Add wikilinks or tags between context notes.',
 			'',
 			'## Communities',
 			'',
@@ -825,7 +799,7 @@ export class ChatView extends ItemView {
 		const panel = this.dashboardContentEl.createDiv({ cls: 'mok-panel mok-graph-panel' });
 		const header = panel.createDiv({ cls: 'mok-graph-header' });
 		header.createEl('h3', { text: 'Knowledge Graph' });
-		header.createEl('p', { text: 'Alda-style overview of synced notes: PageRank size, community color, 1-hop hover, and click-to-inspect.' });
+		header.createEl('p', { text: 'Alda-style overview of local context notes: PageRank size, community color, 1-hop hover, and click-to-inspect.' });
 
 		const controls = panel.createDiv({ cls: 'mok-graph-controls' });
 		const maxLabel = controls.createEl('label', { cls: 'mok-graph-control-label' });
@@ -891,7 +865,7 @@ export class ChatView extends ItemView {
 
 		let graph = await this.loadKnowledgeGraph();
 		if (!graph) {
-			statsEl.setText('No graph yet. Build one from your synced notes.');
+			statsEl.setText('No graph yet. Build one from your context notes.');
 			const empty = graphWrap.createDiv({ cls: 'mok-graph-empty' });
 			empty.createEl('div', { text: 'No graph artifact found.' });
 			empty.createEl('button', {
@@ -1225,7 +1199,7 @@ export class ChatView extends ItemView {
 		close.addEventListener('click', () => panel.addClass('mok-graph-detail-hidden'));
 		panel.createEl('div', {
 			cls: 'mok-graph-detail-kind',
-			text: node.kind === 'tag' ? 'tag bridge' : 'synced note'
+			text: node.kind === 'tag' ? 'tag bridge' : 'context note'
 		});
 		panel.createEl('h4', { text: node.title || node.path });
 		panel.createEl('p', {
@@ -1466,7 +1440,7 @@ export class ChatView extends ItemView {
 	private renderSettingsTab() {
 		const panel = this.dashboardContentEl.createDiv({ cls: 'mok-panel' });
 		panel.createEl('h3', { text: 'Settings' });
-		panel.createEl('p', { text: 'Open plugin settings to change sync folders, Gemini model, Agent CLI path, budget, and Agent output folder.' });
+		panel.createEl('p', { text: 'Open plugin settings to change context folders, Agent CLI path, Agent output folder, and local workspace options.' });
 		const openBtn = panel.createEl('button', {
 			cls: 'gemini-chat-action-btn',
 			text: 'Open Master of Knowledge settings'
@@ -1476,40 +1450,19 @@ export class ChatView extends ItemView {
 
 	private showWelcomeMessage() {
 		this.welcomeEl = this.messagesContainer.createDiv({ cls: 'gemini-chat-welcome' });
-		this.welcomeEl.createEl('div', { cls: 'gemini-chat-welcome-icon', text: this.activeTab === 'agent' ? '🧭' : '🧠' });
-		this.welcomeEl.createEl('h3', { text: this.activeTab === 'agent' ? 'Agent Workspace' : 'Ask your knowledge base' });
-		this.welcomeEl.createEl('p', { text: this.activeTab === 'agent' ? 'Run Antigravity/AGY work from Obsidian, then apply the result to notes with the same actions as chat.' : 'Ask questions about your synced notes. I\'ll help you find information and provide insights based on your personal knowledge base.' });
+		this.welcomeEl.createEl('div', { cls: 'gemini-chat-welcome-icon', text: '🧭' });
+		this.welcomeEl.createEl('h3', { text: 'Agent Workspace' });
+		this.welcomeEl.createEl('p', { text: 'Run Antigravity/AGY work from Obsidian using your local CLI OAuth session, then apply the result to notes.' });
 
-		const stats = this.plugin.syncEngine.getStats();
-		if (stats.synced === 0) {
+		const contextCount = this.plugin.getKnowledgeMarkdownFiles().length;
+		if (contextCount === 0) {
 			this.welcomeEl.createEl('p', {
 				cls: 'gemini-chat-welcome-warning',
-				text: '⚠️ No notes synced yet. Configure sync in settings to get started.'
+				text: '⚠️ No context notes selected yet. Choose context folders in settings to load note excerpts into Agent runs.'
 			});
 		}
 
-		// Example prompts
-		if (this.activeTab === 'agent') return;
-
-		const examplesEl = this.welcomeEl.createDiv({ cls: 'gemini-chat-examples' });
-		examplesEl.createEl('p', { text: 'Try asking:' });
-
-		const examples = [
-			'What are the main topics in my notes?',
-			'Summarize my notes about [topic]',
-			'Find connections between [topic A] and [topic B]'
-		];
-
-		for (const example of examples) {
-			const exampleBtn = examplesEl.createEl('button', {
-				cls: 'gemini-chat-example-btn',
-				text: example
-			});
-			exampleBtn.addEventListener('click', () => {
-				this.inputEl.value = example;
-				this.inputEl.focus();
-			});
-		}
+		return;
 	}
 
 	private renderAgentModeBar(container: HTMLElement) {
@@ -1542,8 +1495,8 @@ export class ChatView extends ItemView {
 		const requestInput = this.inputEl;
 		const requestButton = this.sendButton;
 
-		if (requestTab === 'chat' && !this.plugin.settings.apiKey) {
-			new Notice('Please configure your Gemini API key in settings');
+		if (requestTab !== 'agent') {
+			new Notice('Chat is disabled in this AGY-only fork. Use the Agent tab.');
 			return;
 		}
 
@@ -1558,7 +1511,7 @@ export class ChatView extends ItemView {
 			role: 'user',
 			content: text
 		};
-		const list = requestTab === 'agent' ? this.agentMessages : this.messages;
+		const list = this.agentMessages;
 		list.push(userMessage);
 		this.renderMessage(userMessage);
 
@@ -1604,18 +1557,16 @@ export class ChatView extends ItemView {
 		}
 
 		try {
-			const response = requestTab === 'agent'
-				? await this.runAgentMessage(text, (chunk, stream) => {
-					if (!streamingMessage || stream !== 'stdout') return;
-					streamedContent += chunk;
-					streamingMessage.content = streamedContent.trim() || 'Agent is running...';
-					const now = Date.now();
-					if (this.activeTab === requestTab && now - lastStreamRender > 350) {
-						lastStreamRender = now;
-						this.renderActiveTab();
-					}
-				})
-				: await this.plugin.geminiService.chat(text);
+			const response = await this.runAgentMessage(text, (chunk, stream) => {
+				if (!streamingMessage || stream !== 'stdout') return;
+				streamedContent += chunk;
+				streamingMessage.content = streamedContent.trim() || 'Agent is running...';
+				const now = Date.now();
+				if (this.activeTab === requestTab && now - lastStreamRender > 350) {
+					lastStreamRender = now;
+					this.renderActiveTab();
+				}
+			});
 
 			if (streamingMessage) {
 				streamingMessage.content = response.content;
@@ -1659,7 +1610,7 @@ export class ChatView extends ItemView {
 		const result = await this.plugin.agentService.run(text, onChunk);
 		const contextLine = result.contextStats
 			? [
-				`Knowledge context: ${result.contextStats.totalSyncedNotes} synced notes available; `,
+				`Knowledge context: ${result.contextStats.totalContextNotes} local context notes available; `,
 				`${result.contextStats.loadedExcerptNotes} relevant note excerpts loaded into this Agent run`,
 				result.contextStats.truncatedByBudget ? ' (trimmed to fit the Agent prompt).' : '.'
 			].join('')
@@ -1933,7 +1884,7 @@ export class ChatView extends ItemView {
 			cleanPath += '.md';
 		}
 
-		// Try to find the file in the synced knowledge scope.
+		// Try to find the file in the local context scope.
 		const file = this.resolveCitationFile(cleanPath);
 
 		if (file instanceof TFile) {
@@ -2064,13 +2015,11 @@ export class ChatView extends ItemView {
 	}
 
 	private getSyncedMarkdownFiles(): TFile[] {
-		return this.app.vault.getMarkdownFiles().filter(file => this.isSyncedCitationFile(file));
+		return this.plugin.getKnowledgeMarkdownFiles().filter(file => this.isSyncedCitationFile(file));
 	}
 
 	private isSyncedCitationFile(file: TFile): boolean {
-		const syncData = this.plugin.settings.files[file.path];
 		return file.extension === 'md' &&
-			syncData?.status === 'synced' &&
 			this.plugin.isInSyncFolder(file.path);
 	}
 
@@ -2107,17 +2056,12 @@ export class ChatView extends ItemView {
 			return;
 		}
 
-		if (this.activeTab === 'agent') {
-			this.agentMessages = [];
-			new Notice('Started a new Agent conversation.');
-		} else if (this.activeTab === 'chat') {
-			this.messages = [];
-			this.plugin.geminiService.clearChatHistory();
-			new Notice('Started a new Chat conversation.');
-		} else {
+		if (this.activeTab !== 'agent') {
 			return;
 		}
 
+		this.agentMessages = [];
+		new Notice('Started a new Agent conversation.');
 		this.renderActiveTab();
 	}
 
@@ -2228,7 +2172,7 @@ export class ChatView extends ItemView {
 			minute: '2-digit'
 		});
 
-		const label = this.activeTab === 'agent' ? 'Agent Result' : 'Gemini Response';
+		const label = 'Agent Result';
 		let result = `\n\n---\n*🤖 ${label} (${dateStr})*\n\n${content}`;
 
 		if (citations && citations.length > 0) {
@@ -2319,7 +2263,7 @@ export class ChatView extends ItemView {
 		const folder = this.activeTab === 'agent'
 			? await this.plugin.ensureVaultFolder(this.plugin.settings.agentOutputFolder)
 			: '';
-		const baseName = this.activeTab === 'agent' ? 'Agent Result' : 'Gemini Response';
+		const baseName = 'Agent Result';
 		const fileName = folder
 			? `${folder}/${baseName} ${dateStr} ${timeStr}.md`
 			: `${baseName} ${dateStr} ${timeStr}.md`;

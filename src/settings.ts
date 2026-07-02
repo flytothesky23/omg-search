@@ -1,5 +1,5 @@
 import { App, PluginSettingTab, Setting, Notice, TFolder } from 'obsidian';
-import GeminiSyncPlugin from './main';
+import MokAgyPlugin from './main';
 
 export interface FileSyncData {
 	uri: string;
@@ -8,16 +8,14 @@ export interface FileSyncData {
 	status: 'synced' | 'pending' | 'error';
 }
 
-export interface GeminiSyncSettings {
+export interface MokAgySettings {
+	// Legacy Gemini settings are retained for existing data.json compatibility.
+	// This fork ignores API keys and uses the Antigravity CLI OAuth session only.
 	apiKey: string;
-	model: string;
 	syncFolders: string[];
 	syncFolder?: string; // Legacy setting migrated on load.
 	workspaceFolder: string;
 	agentOutputFolder: string;
-	monthlyBudgetUsd: number;
-	estimatedMonthlySpendUsd: number;
-	estimatedMonthlySpendMonth: string;
 	agentCliPath: string;
 	agentModel: string;
 	agentPermissionMode: 'review' | 'auto' | 'yolo';
@@ -27,23 +25,17 @@ export interface GeminiSyncSettings {
 	agentUseObsidianSkill: boolean;
 	agentObsidianSkillPath: string;
 	corpusName: string;
-	corpusDisplayName: string;
 	autoSync: boolean;
-	syncDebounceMs: number;
 	files: Record<string, FileSyncData>;
 	// Apply to Note settings
 	includeMetadata: boolean;
 }
 
-export const DEFAULT_SETTINGS: GeminiSyncSettings = {
+export const DEFAULT_SETTINGS: MokAgySettings = {
 	apiKey: '',
-	model: 'gemini-2.5-flash',
 	syncFolders: [],
 	workspaceFolder: '_omg',
 	agentOutputFolder: '_omg/agent',
-	monthlyBudgetUsd: 7,
-	estimatedMonthlySpendUsd: 0,
-	estimatedMonthlySpendMonth: '',
 	agentCliPath: 'agy',
 	agentModel: '',
 	agentPermissionMode: 'review',
@@ -53,18 +45,16 @@ export const DEFAULT_SETTINGS: GeminiSyncSettings = {
 	agentUseObsidianSkill: true,
 	agentObsidianSkillPath: '_omg/skills/obsidian-writing-skill.md',
 	corpusName: '',
-	corpusDisplayName: 'Obsidian Vault',
-	autoSync: true,
-	syncDebounceMs: 3000,
+	autoSync: false,
 	files: {},
 	// Apply to Note settings
 	includeMetadata: true
 };
 
-export class GeminiSyncSettingTab extends PluginSettingTab {
-	plugin: GeminiSyncPlugin;
+export class MokAgySettingTab extends PluginSettingTab {
+	plugin: MokAgyPlugin;
 
-	constructor(app: App, plugin: GeminiSyncPlugin) {
+	constructor(app: App, plugin: MokAgyPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}
@@ -73,135 +63,20 @@ export class GeminiSyncSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 
-		containerEl.createEl('h1', { text: 'Master of Knowledge Settings' });
+		containerEl.createEl('h1', { text: 'Master of Knowledge AGY Settings' });
 
-		// API Key Section
-		containerEl.createEl('h2', { text: 'API Configuration' });
-
-		new Setting(containerEl)
-			.setName('Gemini API Key')
-			.setDesc('Enter your Google Gemini API key. Get one from Google AI Studio.')
-			.addText(text => text
-				.setPlaceholder('Enter your API key')
-				.setValue(this.plugin.settings.apiKey ? '••••••••••••••••' : '')
-				.onChange(async (value) => {
-					if (value && !value.includes('•')) {
-						this.plugin.settings.apiKey = value;
-						await this.plugin.saveSettings();
-					}
-				})
-				.inputEl.type = 'password'
-			)
-			.addButton(button => button
-				.setButtonText('Verify')
-				.onClick(async () => {
-					if (!this.plugin.settings.apiKey) {
-						new Notice('Please enter an API key first');
-						return;
-					}
-					button.setButtonText('Verifying...');
-					const isValid = await this.plugin.geminiService.verifyApiKey();
-					if (isValid) {
-						new Notice('API key is valid!');
-						button.setButtonText('Verified ✓');
-					} else {
-						new Notice('Invalid API key. Please check and try again.');
-						button.setButtonText('Verify');
-					}
-				})
-			);
-
-		const fileSearchDiagnosticEl = containerEl.createDiv({ cls: 'mok-file-search-diagnostic' });
-
-		new Setting(containerEl)
-			.setName('File Search Upload Diagnostic')
-			.setDesc('Checks model access, File Search store access, Files API upload, and File Search import. Use this when Sync Dashboard only shows error files.')
-			.addButton(button => button
-				.setButtonText('Diagnose File Search')
-				.onClick(async () => {
-					if (!this.plugin.settings.apiKey) {
-						new Notice('Please enter an API key first');
-						return;
-					}
-					button.setButtonText('Diagnosing...');
-					button.setDisabled(true);
-					fileSearchDiagnosticEl.empty();
-					fileSearchDiagnosticEl.createEl('p', { text: 'Running File Search upload diagnostic...' });
-					try {
-						const result = await this.plugin.geminiService.diagnoseFileSearchUpload();
-						fileSearchDiagnosticEl.empty();
-						fileSearchDiagnosticEl.createEl('strong', {
-							text: result.ok ? 'File Search diagnostic passed' : 'File Search diagnostic failed'
-						});
-						fileSearchDiagnosticEl.createEl('p', {
-							text: `Stage: ${result.stage} | Key type: ${result.keyFamily}${result.status ? ` | HTTP ${result.status}` : ''}`
-						});
-						fileSearchDiagnosticEl.createEl('p', { text: result.message });
-						if (result.recommendation) {
-							fileSearchDiagnosticEl.createEl('p', { text: `Recommendation: ${result.recommendation}` });
-						}
-						if (result.detail) {
-							fileSearchDiagnosticEl.createEl('pre', { text: result.detail });
-						}
-						new Notice(result.ok ? 'File Search upload diagnostic passed.' : `File Search diagnostic failed at ${result.stage}.`);
-					} catch (error) {
-						fileSearchDiagnosticEl.empty();
-						fileSearchDiagnosticEl.createEl('strong', { text: 'File Search diagnostic failed unexpectedly' });
-						fileSearchDiagnosticEl.createEl('pre', { text: error instanceof Error ? error.message : String(error) });
-						new Notice('File Search diagnostic failed. Check the settings panel for details.');
-					} finally {
-						button.setButtonText('Diagnose File Search');
-						button.setDisabled(false);
-					}
-				})
-			);
-
-		new Setting(containerEl)
-			.setName('Gemini Model')
-			.setDesc('Select the Gemini model to use for chat. Gemini 3.5 Flash is recommended for best performance.')
-			.addDropdown(dropdown => {
-				dropdown.addOption('gemini-3.5-flash', 'Gemini 3.5 Flash (Recommended)');
-				dropdown.addOption('gemini-3-flash-preview', 'Gemini 3 Flash Preview');
-				dropdown.addOption('gemini-3.1-pro-preview', 'Gemini 3.1 Pro Preview');
-				dropdown.addOption('gemini-3.1-flash-lite', 'Gemini 3.1 Flash-Lite');
-				dropdown.addOption('gemini-2.5-flash', 'Gemini 2.5 Flash');
-				dropdown.addOption('gemini-2.5-flash-lite', 'Gemini 2.5 Flash Lite');
-				dropdown.addOption('gemini-2.5-pro', 'Gemini 2.5 Pro');
-
-				dropdown.setValue(this.plugin.settings.model);
-				dropdown.onChange(async (value) => {
-					this.plugin.settings.model = value;
-					await this.plugin.saveSettings();
-					// Refresh Gemini client with new model
-					this.plugin.geminiService.refreshClient();
-					new Notice(`Model changed to ${value}`);
-				});
-			});
-
-		// Sync Folder Section
-		containerEl.createEl('h2', { text: 'Sync Configuration' });
+		// Local context folder section
+		containerEl.createEl('h2', { text: 'Agent Context' });
 
 		const folders = this.getAllFolders();
 
 		new Setting(containerEl)
-			.setName('Sync Folders')
-			.setDesc('Select one or more folders to sync with Gemini. Markdown files in selected folders, including subfolders, will be synced.');
+			.setName('Context Folders')
+			.setDesc('Select folders the Agent should use as local vault context. Files stay local and are not synced to Google APIs.');
 
 		this.renderSyncFolderPicker(containerEl, folders);
 
-		new Setting(containerEl)
-			.setName('Corpus Display Name')
-			.setDesc('A friendly name for your knowledge base in Gemini.')
-			.addText(text => text
-				.setPlaceholder('My Obsidian Vault')
-				.setValue(this.plugin.settings.corpusDisplayName)
-				.onChange(async (value) => {
-					this.plugin.settings.corpusDisplayName = value;
-					await this.plugin.saveSettings();
-				})
-			);
-
-		containerEl.createEl('h2', { text: 'Workspace & Budget' });
+		containerEl.createEl('h2', { text: 'Workspace' });
 
 		new Setting(containerEl)
 			.setName('Workspace Folder')
@@ -231,21 +106,6 @@ export class GeminiSyncSettingTab extends PluginSettingTab {
 				.onClick(async () => {
 					await this.plugin.ensureVaultFolder(this.plugin.settings.agentOutputFolder);
 					new Notice(`Agent output folder is ready: ${this.plugin.settings.agentOutputFolder}`);
-				})
-			);
-
-		new Setting(containerEl)
-			.setName('Monthly Budget (USD)')
-			.setDesc('Soft guardrail shown in the dashboard before larger Gemini or Agent workflows.')
-			.addText(text => text
-				.setPlaceholder('7')
-				.setValue(String(this.plugin.settings.monthlyBudgetUsd))
-				.onChange(async (value) => {
-					const num = parseFloat(value);
-					if (!isNaN(num) && num >= 0) {
-						this.plugin.settings.monthlyBudgetUsd = num;
-						await this.plugin.saveSettings();
-					}
 				})
 			);
 
@@ -361,34 +221,8 @@ export class GeminiSyncSettingTab extends PluginSettingTab {
 				})
 			);
 
-		new Setting(containerEl)
-			.setName('Auto Sync')
-			.setDesc('Automatically sync files when they are created, modified, or deleted.')
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.autoSync)
-				.onChange(async (value) => {
-					this.plugin.settings.autoSync = value;
-					await this.plugin.saveSettings();
-				})
-			);
-
-		new Setting(containerEl)
-			.setName('Sync Debounce (ms)')
-			.setDesc('Wait time before syncing after a file change. Helps reduce API calls during rapid edits.')
-			.addText(text => text
-				.setPlaceholder('3000')
-				.setValue(String(this.plugin.settings.syncDebounceMs))
-				.onChange(async (value) => {
-					const num = parseInt(value);
-					if (!isNaN(num) && num >= 0) {
-						this.plugin.settings.syncDebounceMs = num;
-						await this.plugin.saveSettings();
-					}
-				})
-			);
-
 		// Dashboard Section
-		containerEl.createEl('h2', { text: 'Sync Dashboard' });
+		containerEl.createEl('h2', { text: 'Context Dashboard' });
 
 		const dashboardEl = containerEl.createDiv({ cls: 'gemini-sync-dashboard' });
 		this.renderDashboard(dashboardEl);
@@ -397,39 +231,8 @@ export class GeminiSyncSettingTab extends PluginSettingTab {
 		containerEl.createEl('h2', { text: 'Actions' });
 
 		new Setting(containerEl)
-			.setName('Force Full Sync')
-			.setDesc('Re-sync all files in the sync folder. Use this if sync status seems incorrect.')
-			.addButton(button => button
-				.setButtonText('Sync Now')
-				.setCta()
-				.onClick(async () => {
-					if (!this.plugin.settings.apiKey) {
-						new Notice('Please configure your API key first');
-						return;
-					}
-					if (this.plugin.settings.syncFolders.length === 0) {
-						new Notice('Please select at least one sync folder first');
-						return;
-					}
-					button.setButtonText('Syncing...');
-					button.setDisabled(true);
-					try {
-						await this.plugin.syncEngine.fullSync();
-						new Notice('Full sync completed!');
-						this.display(); // Refresh dashboard
-					} catch (error) {
-						new Notice('Sync failed. Check console for details.');
-						console.error('Sync error:', error);
-					} finally {
-						button.setButtonText('Sync Now');
-						button.setDisabled(false);
-					}
-				})
-			);
-
-		new Setting(containerEl)
-			.setName('Clear Sync Data')
-			.setDesc('Remove all local sync mappings. Does NOT delete files from Gemini.')
+			.setName('Clear Legacy Gemini Sync Data')
+			.setDesc('Remove old local Gemini sync mappings from this plugin data file. This does not call external APIs.')
 			.addButton(button => button
 				.setButtonText('Clear')
 				.setWarning()
@@ -437,7 +240,7 @@ export class GeminiSyncSettingTab extends PluginSettingTab {
 					this.plugin.settings.files = {};
 					this.plugin.settings.corpusName = '';
 					await this.plugin.saveSettings();
-					new Notice('Sync data cleared');
+					new Notice('Legacy sync data cleared');
 					this.display();
 				})
 			);
@@ -461,14 +264,10 @@ export class GeminiSyncSettingTab extends PluginSettingTab {
 
 		const helpEl = containerEl.createDiv({ cls: 'gemini-sync-help' });
 		helpEl.createEl('p', {
-			text: 'Master of Knowledge combines Gemini File Search, an Obsidian-native dashboard, and optional Antigravity agent workflows.'
+			text: 'Master of Knowledge AGY uses your local Antigravity CLI OAuth session for Agent workflows. Google API key setup is disabled in this fork.'
 		});
 		helpEl.createEl('p', {
-			text: '⚠️ Note: Using this plugin may incur costs on your Google Cloud account depending on usage.'
-		});
-		helpEl.createEl('a', {
-			text: 'Get API Key from Google AI Studio',
-			href: 'https://aistudio.google.com/app/apikey'
+			text: 'Install or configure the AGY CLI so Obsidian can find it, then choose context folders and run tasks from the Agent tab.'
 		});
 	}
 
@@ -567,47 +366,16 @@ export class GeminiSyncSettingTab extends PluginSettingTab {
 	}
 
 	renderDashboard(container: HTMLElement) {
-		const files = this.plugin.settings.files;
-		const fileCount = Object.keys(files).length;
-
-		let syncedCount = 0;
-		let pendingCount = 0;
-		let errorCount = 0;
-
-		for (const path in files) {
-			const status = files[path].status;
-			if (status === 'synced') syncedCount++;
-			else if (status === 'pending') pendingCount++;
-			else if (status === 'error') errorCount++;
-		}
+		const files = this.plugin.getKnowledgeMarkdownFiles();
+		const fileCount = files.length;
 
 		const statsEl = container.createDiv({ cls: 'sync-stats' });
 
 		statsEl.createEl('div', {
 			cls: 'sync-stat',
-			text: `📁 Total Files: ${fileCount}`
-		});
-		statsEl.createEl('div', {
-			cls: 'sync-stat sync-stat-success',
-			text: `🟢 Synced: ${syncedCount}`
-		});
-		statsEl.createEl('div', {
-			cls: 'sync-stat sync-stat-pending',
-			text: `🟡 Pending: ${pendingCount}`
-		});
-		statsEl.createEl('div', {
-			cls: 'sync-stat sync-stat-error',
-			text: `🔴 Errors: ${errorCount}`
+			text: `📁 Context Files: ${fileCount}`
 		});
 
-		if (this.plugin.settings.corpusName) {
-			container.createEl('div', {
-				cls: 'sync-corpus-info',
-				text: `Corpus: ${this.plugin.settings.corpusDisplayName}`
-			});
-		}
-
-		// Show sync folder info
 		if (this.plugin.settings.syncFolders.length > 0) {
 			const folders = this.plugin.settings.syncFolders;
 			const folderText = folders.length > 5
@@ -615,8 +383,18 @@ export class GeminiSyncSettingTab extends PluginSettingTab {
 				: folders.join(', ');
 			container.createEl('div', {
 				cls: 'sync-folder-info',
-				text: `Watching: ${folderText}`
+				text: `Context folders: ${folderText}`
+			});
+		} else {
+			container.createEl('div', {
+				cls: 'sync-folder-info',
+				text: 'No context folders selected.'
 			});
 		}
+
+		container.createEl('div', {
+			cls: 'sync-corpus-info',
+			text: 'Google Gemini API sync is disabled. Context stays local and is passed to the Antigravity CLI prompt.'
+		});
 	}
 }

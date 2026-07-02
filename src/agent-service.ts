@@ -3,7 +3,7 @@ import { ChildProcessWithoutNullStreams, spawn } from 'child_process';
 import { existsSync } from 'fs';
 import { homedir } from 'os';
 import { delimiter, isAbsolute, join } from 'path';
-import GeminiSyncPlugin from './main';
+import MokAgyPlugin from './main';
 
 export interface AgentRunResult {
 	content: string;
@@ -22,7 +22,7 @@ interface AgentLogRef {
 }
 
 export interface AgentContextStats {
-	totalSyncedNotes: number;
+	totalContextNotes: number;
 	loadedExcerptNotes: number;
 	contextChars: number;
 	truncatedByBudget: boolean;
@@ -34,7 +34,7 @@ export class AgentService {
 	private stopWasRequested = false;
 	private lastContextStats: AgentContextStats | null = null;
 
-	constructor(private plugin: GeminiSyncPlugin) {}
+	constructor(private plugin: MokAgyPlugin) {}
 
 	stop() {
 		if (!this.activeChild) return false;
@@ -149,11 +149,11 @@ export class AgentService {
 		const workspaceFolder = this.plugin.settings.workspaceFolder;
 		const agentOutputFolder = await this.plugin.ensureVaultFolder(this.plugin.settings.agentOutputFolder);
 		const trustMode = this.plugin.settings.agentPermissionMode;
-		const scope = this.plugin.settings.syncFolders.join(', ') || 'No sync folders selected';
+		const scope = this.plugin.settings.syncFolders.join(', ') || 'No context folders selected';
 		const webSearch = this.plugin.settings.agentWebSearchEnabled;
 		const obsidianSkill = await this.getObsidianSkillContext();
-		const syncedNotes = await this.buildSyncedNotesContext(prompt);
-		this.lastContextStats = syncedNotes.stats;
+		const contextNotes = await this.buildLocalNotesContext(prompt);
+		this.lastContextStats = contextNotes.stats;
 		let activeNoteContent = '';
 		if (activeFile) {
 			try {
@@ -179,16 +179,16 @@ export class AgentService {
 			`Selected knowledge folders: ${scope}.`,
 			activeFile ? `Active note path: ${activeFile.path}.` : 'No active note is open.',
 			activeNoteContent ? `Active note content excerpt:\n${activeNoteContent}` : '',
-			`Total synced notes available in selected folders: ${syncedNotes.stats.totalSyncedNotes}.`,
-			`Direct excerpts loaded into this prompt: ${syncedNotes.stats.loadedExcerptNotes}.`,
+			`Total local context notes available in selected folders: ${contextNotes.stats.totalContextNotes}.`,
+			`Direct excerpts loaded into this prompt: ${contextNotes.stats.loadedExcerptNotes}.`,
 			'The excerpts below are a relevance-ranked working set, not the complete knowledge base. Do not describe the total knowledge base as only the excerpt count.',
 			'Use the loaded excerpts first, and use the vault workspace path plus selected knowledge folders when you need to inspect more notes.',
-			'Synced note excerpts loaded for this request. Cite note paths when you use them:',
-			syncedNotes.context,
+			'Local note excerpts loaded for this request. Cite note paths when you use them:',
+			contextNotes.context,
 			webSearch
 				? 'Use web search when current external information would improve the answer, and return markdown with clear web and vault sources.'
 				: 'Do not use web search unless the user explicitly asks for it in the prompt. Prefer vault evidence.',
-			'Answer primarily from the synced notes context. If the answer is not supported by synced notes, say so clearly.',
+			'Answer primarily from the local note context. If the answer is not supported by local notes, say so clearly.',
 			'Do not modify user notes directly unless the prompt explicitly asks for it. Prefer a preview-ready result.',
 			'',
 			'User request:',
@@ -221,11 +221,11 @@ export class AgentService {
 		}
 	}
 
-	private async buildSyncedNotesContext(prompt: string): Promise<{ context: string; stats: AgentContextStats }> {
+	private async buildLocalNotesContext(prompt: string): Promise<{ context: string; stats: AgentContextStats }> {
 		const contexts: string[] = [];
 		let totalLength = 0;
 		const maxTotalLength = 24000;
-		const candidates = await this.getRankedSyncedFiles(prompt);
+		const candidates = await this.getRankedContextFiles(prompt);
 		let truncatedByBudget = false;
 
 		for (const file of candidates) {
@@ -242,12 +242,12 @@ export class AgentService {
 				contexts.push(block);
 				totalLength += block.length;
 			} catch (error) {
-				console.warn(`Failed to read synced note for Agent context: ${file.path}`, error);
+				console.warn(`Failed to read local note for Agent context: ${file.path}`, error);
 			}
 		}
 
 		const stats = {
-			totalSyncedNotes: candidates.length,
+			totalContextNotes: candidates.length,
 			loadedExcerptNotes: contexts.length,
 			contextChars: totalLength,
 			truncatedByBudget,
@@ -257,13 +257,13 @@ export class AgentService {
 		};
 
 		return {
-			context: contexts.join('\n') || 'No synced notes are available in the selected sync folders.',
+			context: contexts.join('\n') || 'No local context notes are available in the selected context folders.',
 			stats
 		};
 	}
 
-	private async getRankedSyncedFiles(prompt: string): Promise<TFile[]> {
-		const files = this.getSyncedMarkdownFiles();
+	private async getRankedContextFiles(prompt: string): Promise<TFile[]> {
+		const files = this.plugin.getKnowledgeMarkdownFiles();
 		const tokens = this.tokenize(prompt);
 		if (tokens.length === 0) return files;
 
@@ -287,21 +287,6 @@ export class AgentService {
 		return scored
 			.sort((a, b) => b.score - a.score || a.file.path.localeCompare(b.file.path))
 			.map(item => item.file);
-	}
-
-	private getSyncedMarkdownFiles(): TFile[] {
-		const files: TFile[] = [];
-		for (const path in this.plugin.settings.files) {
-			const syncData = this.plugin.settings.files[path];
-			if (syncData.status !== 'synced') continue;
-			if (!this.plugin.isInSyncFolder(path)) continue;
-
-			const file = this.plugin.app.vault.getAbstractFileByPath(path);
-			if (file instanceof TFile && file.extension === 'md') {
-				files.push(file);
-			}
-		}
-		return files;
 	}
 
 	private tokenize(text: string): string[] {

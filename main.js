@@ -24,22 +24,18 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 // src/main.ts
 var main_exports = {};
 __export(main_exports, {
-  default: () => GeminiSyncPlugin
+  default: () => MokAgyPlugin
 });
 module.exports = __toCommonJS(main_exports);
-var import_obsidian6 = require("obsidian");
+var import_obsidian4 = require("obsidian");
 
 // src/settings.ts
 var import_obsidian = require("obsidian");
 var DEFAULT_SETTINGS = {
   apiKey: "",
-  model: "gemini-2.5-flash",
   syncFolders: [],
   workspaceFolder: "_omg",
   agentOutputFolder: "_omg/agent",
-  monthlyBudgetUsd: 7,
-  estimatedMonthlySpendUsd: 0,
-  estimatedMonthlySpendMonth: "",
   agentCliPath: "agy",
   agentModel: "",
   agentPermissionMode: "review",
@@ -49,14 +45,12 @@ var DEFAULT_SETTINGS = {
   agentUseObsidianSkill: true,
   agentObsidianSkillPath: "_omg/skills/obsidian-writing-skill.md",
   corpusName: "",
-  corpusDisplayName: "Obsidian Vault",
-  autoSync: true,
-  syncDebounceMs: 3e3,
+  autoSync: false,
   files: {},
   // Apply to Note settings
   includeMetadata: true
 };
-var GeminiSyncSettingTab = class extends import_obsidian.PluginSettingTab {
+var MokAgySettingTab = class extends import_obsidian.PluginSettingTab {
   constructor(app, plugin) {
     super(app, plugin);
     this.plugin = plugin;
@@ -64,98 +58,12 @@ var GeminiSyncSettingTab = class extends import_obsidian.PluginSettingTab {
   display() {
     const { containerEl } = this;
     containerEl.empty();
-    containerEl.createEl("h1", { text: "Master of Knowledge Settings" });
-    containerEl.createEl("h2", { text: "API Configuration" });
-    new import_obsidian.Setting(containerEl).setName("Gemini API Key").setDesc("Enter your Google Gemini API key. Get one from Google AI Studio.").addText(
-      (text) => text.setPlaceholder("Enter your API key").setValue(this.plugin.settings.apiKey ? "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022" : "").onChange(async (value) => {
-        if (value && !value.includes("\u2022")) {
-          this.plugin.settings.apiKey = value;
-          await this.plugin.saveSettings();
-        }
-      }).inputEl.type = "password"
-    ).addButton(
-      (button) => button.setButtonText("Verify").onClick(async () => {
-        if (!this.plugin.settings.apiKey) {
-          new import_obsidian.Notice("Please enter an API key first");
-          return;
-        }
-        button.setButtonText("Verifying...");
-        const isValid = await this.plugin.geminiService.verifyApiKey();
-        if (isValid) {
-          new import_obsidian.Notice("API key is valid!");
-          button.setButtonText("Verified \u2713");
-        } else {
-          new import_obsidian.Notice("Invalid API key. Please check and try again.");
-          button.setButtonText("Verify");
-        }
-      })
-    );
-    const fileSearchDiagnosticEl = containerEl.createDiv({ cls: "mok-file-search-diagnostic" });
-    new import_obsidian.Setting(containerEl).setName("File Search Upload Diagnostic").setDesc("Checks model access, File Search store access, Files API upload, and File Search import. Use this when Sync Dashboard only shows error files.").addButton(
-      (button) => button.setButtonText("Diagnose File Search").onClick(async () => {
-        if (!this.plugin.settings.apiKey) {
-          new import_obsidian.Notice("Please enter an API key first");
-          return;
-        }
-        button.setButtonText("Diagnosing...");
-        button.setDisabled(true);
-        fileSearchDiagnosticEl.empty();
-        fileSearchDiagnosticEl.createEl("p", { text: "Running File Search upload diagnostic..." });
-        try {
-          const result = await this.plugin.geminiService.diagnoseFileSearchUpload();
-          fileSearchDiagnosticEl.empty();
-          fileSearchDiagnosticEl.createEl("strong", {
-            text: result.ok ? "File Search diagnostic passed" : "File Search diagnostic failed"
-          });
-          fileSearchDiagnosticEl.createEl("p", {
-            text: `Stage: ${result.stage} | Key type: ${result.keyFamily}${result.status ? ` | HTTP ${result.status}` : ""}`
-          });
-          fileSearchDiagnosticEl.createEl("p", { text: result.message });
-          if (result.recommendation) {
-            fileSearchDiagnosticEl.createEl("p", { text: `Recommendation: ${result.recommendation}` });
-          }
-          if (result.detail) {
-            fileSearchDiagnosticEl.createEl("pre", { text: result.detail });
-          }
-          new import_obsidian.Notice(result.ok ? "File Search upload diagnostic passed." : `File Search diagnostic failed at ${result.stage}.`);
-        } catch (error) {
-          fileSearchDiagnosticEl.empty();
-          fileSearchDiagnosticEl.createEl("strong", { text: "File Search diagnostic failed unexpectedly" });
-          fileSearchDiagnosticEl.createEl("pre", { text: error instanceof Error ? error.message : String(error) });
-          new import_obsidian.Notice("File Search diagnostic failed. Check the settings panel for details.");
-        } finally {
-          button.setButtonText("Diagnose File Search");
-          button.setDisabled(false);
-        }
-      })
-    );
-    new import_obsidian.Setting(containerEl).setName("Gemini Model").setDesc("Select the Gemini model to use for chat. Gemini 3.5 Flash is recommended for best performance.").addDropdown((dropdown) => {
-      dropdown.addOption("gemini-3.5-flash", "Gemini 3.5 Flash (Recommended)");
-      dropdown.addOption("gemini-3-flash-preview", "Gemini 3 Flash Preview");
-      dropdown.addOption("gemini-3.1-pro-preview", "Gemini 3.1 Pro Preview");
-      dropdown.addOption("gemini-3.1-flash-lite", "Gemini 3.1 Flash-Lite");
-      dropdown.addOption("gemini-2.5-flash", "Gemini 2.5 Flash");
-      dropdown.addOption("gemini-2.5-flash-lite", "Gemini 2.5 Flash Lite");
-      dropdown.addOption("gemini-2.5-pro", "Gemini 2.5 Pro");
-      dropdown.setValue(this.plugin.settings.model);
-      dropdown.onChange(async (value) => {
-        this.plugin.settings.model = value;
-        await this.plugin.saveSettings();
-        this.plugin.geminiService.refreshClient();
-        new import_obsidian.Notice(`Model changed to ${value}`);
-      });
-    });
-    containerEl.createEl("h2", { text: "Sync Configuration" });
+    containerEl.createEl("h1", { text: "Master of Knowledge AGY Settings" });
+    containerEl.createEl("h2", { text: "Agent Context" });
     const folders = this.getAllFolders();
-    new import_obsidian.Setting(containerEl).setName("Sync Folders").setDesc("Select one or more folders to sync with Gemini. Markdown files in selected folders, including subfolders, will be synced.");
+    new import_obsidian.Setting(containerEl).setName("Context Folders").setDesc("Select folders the Agent should use as local vault context. Files stay local and are not synced to Google APIs.");
     this.renderSyncFolderPicker(containerEl, folders);
-    new import_obsidian.Setting(containerEl).setName("Corpus Display Name").setDesc("A friendly name for your knowledge base in Gemini.").addText(
-      (text) => text.setPlaceholder("My Obsidian Vault").setValue(this.plugin.settings.corpusDisplayName).onChange(async (value) => {
-        this.plugin.settings.corpusDisplayName = value;
-        await this.plugin.saveSettings();
-      })
-    );
-    containerEl.createEl("h2", { text: "Workspace & Budget" });
+    containerEl.createEl("h2", { text: "Workspace" });
     new import_obsidian.Setting(containerEl).setName("Workspace Folder").setDesc("Generated agent reports, compiled notes, graphs, and logs are saved under this vault folder.").addText(
       (text) => text.setPlaceholder("_omg").setValue(this.plugin.settings.workspaceFolder).onChange(async (value) => {
         this.plugin.settings.workspaceFolder = this.plugin.normalizeFolder(value.trim() || "_omg", "_omg");
@@ -171,15 +79,6 @@ var GeminiSyncSettingTab = class extends import_obsidian.PluginSettingTab {
       (button) => button.setButtonText("Create").onClick(async () => {
         await this.plugin.ensureVaultFolder(this.plugin.settings.agentOutputFolder);
         new import_obsidian.Notice(`Agent output folder is ready: ${this.plugin.settings.agentOutputFolder}`);
-      })
-    );
-    new import_obsidian.Setting(containerEl).setName("Monthly Budget (USD)").setDesc("Soft guardrail shown in the dashboard before larger Gemini or Agent workflows.").addText(
-      (text) => text.setPlaceholder("7").setValue(String(this.plugin.settings.monthlyBudgetUsd)).onChange(async (value) => {
-        const num = parseFloat(value);
-        if (!isNaN(num) && num >= 0) {
-          this.plugin.settings.monthlyBudgetUsd = num;
-          await this.plugin.saveSettings();
-        }
       })
     );
     containerEl.createEl("h2", { text: "Agent Workspace" });
@@ -255,56 +154,16 @@ var GeminiSyncSettingTab = class extends import_obsidian.PluginSettingTab {
         this.display();
       })
     );
-    new import_obsidian.Setting(containerEl).setName("Auto Sync").setDesc("Automatically sync files when they are created, modified, or deleted.").addToggle(
-      (toggle) => toggle.setValue(this.plugin.settings.autoSync).onChange(async (value) => {
-        this.plugin.settings.autoSync = value;
-        await this.plugin.saveSettings();
-      })
-    );
-    new import_obsidian.Setting(containerEl).setName("Sync Debounce (ms)").setDesc("Wait time before syncing after a file change. Helps reduce API calls during rapid edits.").addText(
-      (text) => text.setPlaceholder("3000").setValue(String(this.plugin.settings.syncDebounceMs)).onChange(async (value) => {
-        const num = parseInt(value);
-        if (!isNaN(num) && num >= 0) {
-          this.plugin.settings.syncDebounceMs = num;
-          await this.plugin.saveSettings();
-        }
-      })
-    );
-    containerEl.createEl("h2", { text: "Sync Dashboard" });
+    containerEl.createEl("h2", { text: "Context Dashboard" });
     const dashboardEl = containerEl.createDiv({ cls: "gemini-sync-dashboard" });
     this.renderDashboard(dashboardEl);
     containerEl.createEl("h2", { text: "Actions" });
-    new import_obsidian.Setting(containerEl).setName("Force Full Sync").setDesc("Re-sync all files in the sync folder. Use this if sync status seems incorrect.").addButton(
-      (button) => button.setButtonText("Sync Now").setCta().onClick(async () => {
-        if (!this.plugin.settings.apiKey) {
-          new import_obsidian.Notice("Please configure your API key first");
-          return;
-        }
-        if (this.plugin.settings.syncFolders.length === 0) {
-          new import_obsidian.Notice("Please select at least one sync folder first");
-          return;
-        }
-        button.setButtonText("Syncing...");
-        button.setDisabled(true);
-        try {
-          await this.plugin.syncEngine.fullSync();
-          new import_obsidian.Notice("Full sync completed!");
-          this.display();
-        } catch (error) {
-          new import_obsidian.Notice("Sync failed. Check console for details.");
-          console.error("Sync error:", error);
-        } finally {
-          button.setButtonText("Sync Now");
-          button.setDisabled(false);
-        }
-      })
-    );
-    new import_obsidian.Setting(containerEl).setName("Clear Sync Data").setDesc("Remove all local sync mappings. Does NOT delete files from Gemini.").addButton(
+    new import_obsidian.Setting(containerEl).setName("Clear Legacy Gemini Sync Data").setDesc("Remove old local Gemini sync mappings from this plugin data file. This does not call external APIs.").addButton(
       (button) => button.setButtonText("Clear").setWarning().onClick(async () => {
         this.plugin.settings.files = {};
         this.plugin.settings.corpusName = "";
         await this.plugin.saveSettings();
-        new import_obsidian.Notice("Sync data cleared");
+        new import_obsidian.Notice("Legacy sync data cleared");
         this.display();
       })
     );
@@ -318,14 +177,10 @@ var GeminiSyncSettingTab = class extends import_obsidian.PluginSettingTab {
     containerEl.createEl("h2", { text: "Help" });
     const helpEl = containerEl.createDiv({ cls: "gemini-sync-help" });
     helpEl.createEl("p", {
-      text: "Master of Knowledge combines Gemini File Search, an Obsidian-native dashboard, and optional Antigravity agent workflows."
+      text: "Master of Knowledge AGY uses your local Antigravity CLI OAuth session for Agent workflows. Google API key setup is disabled in this fork."
     });
     helpEl.createEl("p", {
-      text: "\u26A0\uFE0F Note: Using this plugin may incur costs on your Google Cloud account depending on usage."
-    });
-    helpEl.createEl("a", {
-      text: "Get API Key from Google AI Studio",
-      href: "https://aistudio.google.com/app/apikey"
+      text: "Install or configure the AGY CLI so Obsidian can find it, then choose context folders and run tasks from the Agent tab."
     });
   }
   getAllFolders() {
@@ -409,2496 +264,36 @@ var GeminiSyncSettingTab = class extends import_obsidian.PluginSettingTab {
     this.display();
   }
   renderDashboard(container) {
-    const files = this.plugin.settings.files;
-    const fileCount = Object.keys(files).length;
-    let syncedCount = 0;
-    let pendingCount = 0;
-    let errorCount = 0;
-    for (const path in files) {
-      const status = files[path].status;
-      if (status === "synced")
-        syncedCount++;
-      else if (status === "pending")
-        pendingCount++;
-      else if (status === "error")
-        errorCount++;
-    }
+    const files = this.plugin.getKnowledgeMarkdownFiles();
+    const fileCount = files.length;
     const statsEl = container.createDiv({ cls: "sync-stats" });
     statsEl.createEl("div", {
       cls: "sync-stat",
-      text: `\u{1F4C1} Total Files: ${fileCount}`
+      text: `\u{1F4C1} Context Files: ${fileCount}`
     });
-    statsEl.createEl("div", {
-      cls: "sync-stat sync-stat-success",
-      text: `\u{1F7E2} Synced: ${syncedCount}`
-    });
-    statsEl.createEl("div", {
-      cls: "sync-stat sync-stat-pending",
-      text: `\u{1F7E1} Pending: ${pendingCount}`
-    });
-    statsEl.createEl("div", {
-      cls: "sync-stat sync-stat-error",
-      text: `\u{1F534} Errors: ${errorCount}`
-    });
-    if (this.plugin.settings.corpusName) {
-      container.createEl("div", {
-        cls: "sync-corpus-info",
-        text: `Corpus: ${this.plugin.settings.corpusDisplayName}`
-      });
-    }
     if (this.plugin.settings.syncFolders.length > 0) {
       const folders = this.plugin.settings.syncFolders;
       const folderText = folders.length > 5 ? `${folders.slice(0, 5).join(", ")} +${folders.length - 5} more` : folders.join(", ");
       container.createEl("div", {
         cls: "sync-folder-info",
-        text: `Watching: ${folderText}`
+        text: `Context folders: ${folderText}`
       });
-    }
-  }
-};
-
-// node_modules/@google/generative-ai/dist/index.mjs
-var SchemaType;
-(function(SchemaType2) {
-  SchemaType2["STRING"] = "string";
-  SchemaType2["NUMBER"] = "number";
-  SchemaType2["INTEGER"] = "integer";
-  SchemaType2["BOOLEAN"] = "boolean";
-  SchemaType2["ARRAY"] = "array";
-  SchemaType2["OBJECT"] = "object";
-})(SchemaType || (SchemaType = {}));
-var ExecutableCodeLanguage;
-(function(ExecutableCodeLanguage2) {
-  ExecutableCodeLanguage2["LANGUAGE_UNSPECIFIED"] = "language_unspecified";
-  ExecutableCodeLanguage2["PYTHON"] = "python";
-})(ExecutableCodeLanguage || (ExecutableCodeLanguage = {}));
-var Outcome;
-(function(Outcome2) {
-  Outcome2["OUTCOME_UNSPECIFIED"] = "outcome_unspecified";
-  Outcome2["OUTCOME_OK"] = "outcome_ok";
-  Outcome2["OUTCOME_FAILED"] = "outcome_failed";
-  Outcome2["OUTCOME_DEADLINE_EXCEEDED"] = "outcome_deadline_exceeded";
-})(Outcome || (Outcome = {}));
-var POSSIBLE_ROLES = ["user", "model", "function", "system"];
-var HarmCategory;
-(function(HarmCategory2) {
-  HarmCategory2["HARM_CATEGORY_UNSPECIFIED"] = "HARM_CATEGORY_UNSPECIFIED";
-  HarmCategory2["HARM_CATEGORY_HATE_SPEECH"] = "HARM_CATEGORY_HATE_SPEECH";
-  HarmCategory2["HARM_CATEGORY_SEXUALLY_EXPLICIT"] = "HARM_CATEGORY_SEXUALLY_EXPLICIT";
-  HarmCategory2["HARM_CATEGORY_HARASSMENT"] = "HARM_CATEGORY_HARASSMENT";
-  HarmCategory2["HARM_CATEGORY_DANGEROUS_CONTENT"] = "HARM_CATEGORY_DANGEROUS_CONTENT";
-})(HarmCategory || (HarmCategory = {}));
-var HarmBlockThreshold;
-(function(HarmBlockThreshold2) {
-  HarmBlockThreshold2["HARM_BLOCK_THRESHOLD_UNSPECIFIED"] = "HARM_BLOCK_THRESHOLD_UNSPECIFIED";
-  HarmBlockThreshold2["BLOCK_LOW_AND_ABOVE"] = "BLOCK_LOW_AND_ABOVE";
-  HarmBlockThreshold2["BLOCK_MEDIUM_AND_ABOVE"] = "BLOCK_MEDIUM_AND_ABOVE";
-  HarmBlockThreshold2["BLOCK_ONLY_HIGH"] = "BLOCK_ONLY_HIGH";
-  HarmBlockThreshold2["BLOCK_NONE"] = "BLOCK_NONE";
-})(HarmBlockThreshold || (HarmBlockThreshold = {}));
-var HarmProbability;
-(function(HarmProbability2) {
-  HarmProbability2["HARM_PROBABILITY_UNSPECIFIED"] = "HARM_PROBABILITY_UNSPECIFIED";
-  HarmProbability2["NEGLIGIBLE"] = "NEGLIGIBLE";
-  HarmProbability2["LOW"] = "LOW";
-  HarmProbability2["MEDIUM"] = "MEDIUM";
-  HarmProbability2["HIGH"] = "HIGH";
-})(HarmProbability || (HarmProbability = {}));
-var BlockReason;
-(function(BlockReason2) {
-  BlockReason2["BLOCKED_REASON_UNSPECIFIED"] = "BLOCKED_REASON_UNSPECIFIED";
-  BlockReason2["SAFETY"] = "SAFETY";
-  BlockReason2["OTHER"] = "OTHER";
-})(BlockReason || (BlockReason = {}));
-var FinishReason;
-(function(FinishReason2) {
-  FinishReason2["FINISH_REASON_UNSPECIFIED"] = "FINISH_REASON_UNSPECIFIED";
-  FinishReason2["STOP"] = "STOP";
-  FinishReason2["MAX_TOKENS"] = "MAX_TOKENS";
-  FinishReason2["SAFETY"] = "SAFETY";
-  FinishReason2["RECITATION"] = "RECITATION";
-  FinishReason2["LANGUAGE"] = "LANGUAGE";
-  FinishReason2["OTHER"] = "OTHER";
-})(FinishReason || (FinishReason = {}));
-var TaskType;
-(function(TaskType2) {
-  TaskType2["TASK_TYPE_UNSPECIFIED"] = "TASK_TYPE_UNSPECIFIED";
-  TaskType2["RETRIEVAL_QUERY"] = "RETRIEVAL_QUERY";
-  TaskType2["RETRIEVAL_DOCUMENT"] = "RETRIEVAL_DOCUMENT";
-  TaskType2["SEMANTIC_SIMILARITY"] = "SEMANTIC_SIMILARITY";
-  TaskType2["CLASSIFICATION"] = "CLASSIFICATION";
-  TaskType2["CLUSTERING"] = "CLUSTERING";
-})(TaskType || (TaskType = {}));
-var FunctionCallingMode;
-(function(FunctionCallingMode2) {
-  FunctionCallingMode2["MODE_UNSPECIFIED"] = "MODE_UNSPECIFIED";
-  FunctionCallingMode2["AUTO"] = "AUTO";
-  FunctionCallingMode2["ANY"] = "ANY";
-  FunctionCallingMode2["NONE"] = "NONE";
-})(FunctionCallingMode || (FunctionCallingMode = {}));
-var DynamicRetrievalMode;
-(function(DynamicRetrievalMode2) {
-  DynamicRetrievalMode2["MODE_UNSPECIFIED"] = "MODE_UNSPECIFIED";
-  DynamicRetrievalMode2["MODE_DYNAMIC"] = "MODE_DYNAMIC";
-})(DynamicRetrievalMode || (DynamicRetrievalMode = {}));
-var GoogleGenerativeAIError = class extends Error {
-  constructor(message) {
-    super(`[GoogleGenerativeAI Error]: ${message}`);
-  }
-};
-var GoogleGenerativeAIResponseError = class extends GoogleGenerativeAIError {
-  constructor(message, response) {
-    super(message);
-    this.response = response;
-  }
-};
-var GoogleGenerativeAIFetchError = class extends GoogleGenerativeAIError {
-  constructor(message, status, statusText, errorDetails) {
-    super(message);
-    this.status = status;
-    this.statusText = statusText;
-    this.errorDetails = errorDetails;
-  }
-};
-var GoogleGenerativeAIRequestInputError = class extends GoogleGenerativeAIError {
-};
-var DEFAULT_BASE_URL = "https://generativelanguage.googleapis.com";
-var DEFAULT_API_VERSION = "v1beta";
-var PACKAGE_VERSION = "0.21.0";
-var PACKAGE_LOG_HEADER = "genai-js";
-var Task;
-(function(Task2) {
-  Task2["GENERATE_CONTENT"] = "generateContent";
-  Task2["STREAM_GENERATE_CONTENT"] = "streamGenerateContent";
-  Task2["COUNT_TOKENS"] = "countTokens";
-  Task2["EMBED_CONTENT"] = "embedContent";
-  Task2["BATCH_EMBED_CONTENTS"] = "batchEmbedContents";
-})(Task || (Task = {}));
-var RequestUrl = class {
-  constructor(model, task, apiKey, stream, requestOptions) {
-    this.model = model;
-    this.task = task;
-    this.apiKey = apiKey;
-    this.stream = stream;
-    this.requestOptions = requestOptions;
-  }
-  toString() {
-    var _a, _b;
-    const apiVersion = ((_a = this.requestOptions) === null || _a === void 0 ? void 0 : _a.apiVersion) || DEFAULT_API_VERSION;
-    const baseUrl = ((_b = this.requestOptions) === null || _b === void 0 ? void 0 : _b.baseUrl) || DEFAULT_BASE_URL;
-    let url = `${baseUrl}/${apiVersion}/${this.model}:${this.task}`;
-    if (this.stream) {
-      url += "?alt=sse";
-    }
-    return url;
-  }
-};
-function getClientHeaders(requestOptions) {
-  const clientHeaders = [];
-  if (requestOptions === null || requestOptions === void 0 ? void 0 : requestOptions.apiClient) {
-    clientHeaders.push(requestOptions.apiClient);
-  }
-  clientHeaders.push(`${PACKAGE_LOG_HEADER}/${PACKAGE_VERSION}`);
-  return clientHeaders.join(" ");
-}
-async function getHeaders(url) {
-  var _a;
-  const headers = new Headers();
-  headers.append("Content-Type", "application/json");
-  headers.append("x-goog-api-client", getClientHeaders(url.requestOptions));
-  headers.append("x-goog-api-key", url.apiKey);
-  let customHeaders = (_a = url.requestOptions) === null || _a === void 0 ? void 0 : _a.customHeaders;
-  if (customHeaders) {
-    if (!(customHeaders instanceof Headers)) {
-      try {
-        customHeaders = new Headers(customHeaders);
-      } catch (e) {
-        throw new GoogleGenerativeAIRequestInputError(`unable to convert customHeaders value ${JSON.stringify(customHeaders)} to Headers: ${e.message}`);
-      }
-    }
-    for (const [headerName, headerValue] of customHeaders.entries()) {
-      if (headerName === "x-goog-api-key") {
-        throw new GoogleGenerativeAIRequestInputError(`Cannot set reserved header name ${headerName}`);
-      } else if (headerName === "x-goog-api-client") {
-        throw new GoogleGenerativeAIRequestInputError(`Header name ${headerName} can only be set using the apiClient field`);
-      }
-      headers.append(headerName, headerValue);
-    }
-  }
-  return headers;
-}
-async function constructModelRequest(model, task, apiKey, stream, body, requestOptions) {
-  const url = new RequestUrl(model, task, apiKey, stream, requestOptions);
-  return {
-    url: url.toString(),
-    fetchOptions: Object.assign(Object.assign({}, buildFetchOptions(requestOptions)), { method: "POST", headers: await getHeaders(url), body })
-  };
-}
-async function makeModelRequest(model, task, apiKey, stream, body, requestOptions = {}, fetchFn = fetch) {
-  const { url, fetchOptions } = await constructModelRequest(model, task, apiKey, stream, body, requestOptions);
-  return makeRequest(url, fetchOptions, fetchFn);
-}
-async function makeRequest(url, fetchOptions, fetchFn = fetch) {
-  let response;
-  try {
-    response = await fetchFn(url, fetchOptions);
-  } catch (e) {
-    handleResponseError(e, url);
-  }
-  if (!response.ok) {
-    await handleResponseNotOk(response, url);
-  }
-  return response;
-}
-function handleResponseError(e, url) {
-  let err = e;
-  if (!(e instanceof GoogleGenerativeAIFetchError || e instanceof GoogleGenerativeAIRequestInputError)) {
-    err = new GoogleGenerativeAIError(`Error fetching from ${url.toString()}: ${e.message}`);
-    err.stack = e.stack;
-  }
-  throw err;
-}
-async function handleResponseNotOk(response, url) {
-  let message = "";
-  let errorDetails;
-  try {
-    const json = await response.json();
-    message = json.error.message;
-    if (json.error.details) {
-      message += ` ${JSON.stringify(json.error.details)}`;
-      errorDetails = json.error.details;
-    }
-  } catch (e) {
-  }
-  throw new GoogleGenerativeAIFetchError(`Error fetching from ${url.toString()}: [${response.status} ${response.statusText}] ${message}`, response.status, response.statusText, errorDetails);
-}
-function buildFetchOptions(requestOptions) {
-  const fetchOptions = {};
-  if ((requestOptions === null || requestOptions === void 0 ? void 0 : requestOptions.signal) !== void 0 || (requestOptions === null || requestOptions === void 0 ? void 0 : requestOptions.timeout) >= 0) {
-    const controller = new AbortController();
-    if ((requestOptions === null || requestOptions === void 0 ? void 0 : requestOptions.timeout) >= 0) {
-      setTimeout(() => controller.abort(), requestOptions.timeout);
-    }
-    if (requestOptions === null || requestOptions === void 0 ? void 0 : requestOptions.signal) {
-      requestOptions.signal.addEventListener("abort", () => {
-        controller.abort();
-      });
-    }
-    fetchOptions.signal = controller.signal;
-  }
-  return fetchOptions;
-}
-function addHelpers(response) {
-  response.text = () => {
-    if (response.candidates && response.candidates.length > 0) {
-      if (response.candidates.length > 1) {
-        console.warn(`This response had ${response.candidates.length} candidates. Returning text from the first candidate only. Access response.candidates directly to use the other candidates.`);
-      }
-      if (hadBadFinishReason(response.candidates[0])) {
-        throw new GoogleGenerativeAIResponseError(`${formatBlockErrorMessage(response)}`, response);
-      }
-      return getText(response);
-    } else if (response.promptFeedback) {
-      throw new GoogleGenerativeAIResponseError(`Text not available. ${formatBlockErrorMessage(response)}`, response);
-    }
-    return "";
-  };
-  response.functionCall = () => {
-    if (response.candidates && response.candidates.length > 0) {
-      if (response.candidates.length > 1) {
-        console.warn(`This response had ${response.candidates.length} candidates. Returning function calls from the first candidate only. Access response.candidates directly to use the other candidates.`);
-      }
-      if (hadBadFinishReason(response.candidates[0])) {
-        throw new GoogleGenerativeAIResponseError(`${formatBlockErrorMessage(response)}`, response);
-      }
-      console.warn(`response.functionCall() is deprecated. Use response.functionCalls() instead.`);
-      return getFunctionCalls(response)[0];
-    } else if (response.promptFeedback) {
-      throw new GoogleGenerativeAIResponseError(`Function call not available. ${formatBlockErrorMessage(response)}`, response);
-    }
-    return void 0;
-  };
-  response.functionCalls = () => {
-    if (response.candidates && response.candidates.length > 0) {
-      if (response.candidates.length > 1) {
-        console.warn(`This response had ${response.candidates.length} candidates. Returning function calls from the first candidate only. Access response.candidates directly to use the other candidates.`);
-      }
-      if (hadBadFinishReason(response.candidates[0])) {
-        throw new GoogleGenerativeAIResponseError(`${formatBlockErrorMessage(response)}`, response);
-      }
-      return getFunctionCalls(response);
-    } else if (response.promptFeedback) {
-      throw new GoogleGenerativeAIResponseError(`Function call not available. ${formatBlockErrorMessage(response)}`, response);
-    }
-    return void 0;
-  };
-  return response;
-}
-function getText(response) {
-  var _a, _b, _c, _d;
-  const textStrings = [];
-  if ((_b = (_a = response.candidates) === null || _a === void 0 ? void 0 : _a[0].content) === null || _b === void 0 ? void 0 : _b.parts) {
-    for (const part of (_d = (_c = response.candidates) === null || _c === void 0 ? void 0 : _c[0].content) === null || _d === void 0 ? void 0 : _d.parts) {
-      if (part.text) {
-        textStrings.push(part.text);
-      }
-      if (part.executableCode) {
-        textStrings.push("\n```" + part.executableCode.language + "\n" + part.executableCode.code + "\n```\n");
-      }
-      if (part.codeExecutionResult) {
-        textStrings.push("\n```\n" + part.codeExecutionResult.output + "\n```\n");
-      }
-    }
-  }
-  if (textStrings.length > 0) {
-    return textStrings.join("");
-  } else {
-    return "";
-  }
-}
-function getFunctionCalls(response) {
-  var _a, _b, _c, _d;
-  const functionCalls = [];
-  if ((_b = (_a = response.candidates) === null || _a === void 0 ? void 0 : _a[0].content) === null || _b === void 0 ? void 0 : _b.parts) {
-    for (const part of (_d = (_c = response.candidates) === null || _c === void 0 ? void 0 : _c[0].content) === null || _d === void 0 ? void 0 : _d.parts) {
-      if (part.functionCall) {
-        functionCalls.push(part.functionCall);
-      }
-    }
-  }
-  if (functionCalls.length > 0) {
-    return functionCalls;
-  } else {
-    return void 0;
-  }
-}
-var badFinishReasons = [
-  FinishReason.RECITATION,
-  FinishReason.SAFETY,
-  FinishReason.LANGUAGE
-];
-function hadBadFinishReason(candidate) {
-  return !!candidate.finishReason && badFinishReasons.includes(candidate.finishReason);
-}
-function formatBlockErrorMessage(response) {
-  var _a, _b, _c;
-  let message = "";
-  if ((!response.candidates || response.candidates.length === 0) && response.promptFeedback) {
-    message += "Response was blocked";
-    if ((_a = response.promptFeedback) === null || _a === void 0 ? void 0 : _a.blockReason) {
-      message += ` due to ${response.promptFeedback.blockReason}`;
-    }
-    if ((_b = response.promptFeedback) === null || _b === void 0 ? void 0 : _b.blockReasonMessage) {
-      message += `: ${response.promptFeedback.blockReasonMessage}`;
-    }
-  } else if ((_c = response.candidates) === null || _c === void 0 ? void 0 : _c[0]) {
-    const firstCandidate = response.candidates[0];
-    if (hadBadFinishReason(firstCandidate)) {
-      message += `Candidate was blocked due to ${firstCandidate.finishReason}`;
-      if (firstCandidate.finishMessage) {
-        message += `: ${firstCandidate.finishMessage}`;
-      }
-    }
-  }
-  return message;
-}
-function __await(v) {
-  return this instanceof __await ? (this.v = v, this) : new __await(v);
-}
-function __asyncGenerator(thisArg, _arguments, generator) {
-  if (!Symbol.asyncIterator)
-    throw new TypeError("Symbol.asyncIterator is not defined.");
-  var g = generator.apply(thisArg, _arguments || []), i, q = [];
-  return i = {}, verb("next"), verb("throw"), verb("return"), i[Symbol.asyncIterator] = function() {
-    return this;
-  }, i;
-  function verb(n) {
-    if (g[n])
-      i[n] = function(v) {
-        return new Promise(function(a, b) {
-          q.push([n, v, a, b]) > 1 || resume(n, v);
-        });
-      };
-  }
-  function resume(n, v) {
-    try {
-      step(g[n](v));
-    } catch (e) {
-      settle(q[0][3], e);
-    }
-  }
-  function step(r) {
-    r.value instanceof __await ? Promise.resolve(r.value.v).then(fulfill, reject) : settle(q[0][2], r);
-  }
-  function fulfill(value) {
-    resume("next", value);
-  }
-  function reject(value) {
-    resume("throw", value);
-  }
-  function settle(f, v) {
-    if (f(v), q.shift(), q.length)
-      resume(q[0][0], q[0][1]);
-  }
-}
-var responseLineRE = /^data\: (.*)(?:\n\n|\r\r|\r\n\r\n)/;
-function processStream(response) {
-  const inputStream = response.body.pipeThrough(new TextDecoderStream("utf8", { fatal: true }));
-  const responseStream = getResponseStream(inputStream);
-  const [stream1, stream2] = responseStream.tee();
-  return {
-    stream: generateResponseSequence(stream1),
-    response: getResponsePromise(stream2)
-  };
-}
-async function getResponsePromise(stream) {
-  const allResponses = [];
-  const reader = stream.getReader();
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) {
-      return addHelpers(aggregateResponses(allResponses));
-    }
-    allResponses.push(value);
-  }
-}
-function generateResponseSequence(stream) {
-  return __asyncGenerator(this, arguments, function* generateResponseSequence_1() {
-    const reader = stream.getReader();
-    while (true) {
-      const { value, done } = yield __await(reader.read());
-      if (done) {
-        break;
-      }
-      yield yield __await(addHelpers(value));
-    }
-  });
-}
-function getResponseStream(inputStream) {
-  const reader = inputStream.getReader();
-  const stream = new ReadableStream({
-    start(controller) {
-      let currentText = "";
-      return pump();
-      function pump() {
-        return reader.read().then(({ value, done }) => {
-          if (done) {
-            if (currentText.trim()) {
-              controller.error(new GoogleGenerativeAIError("Failed to parse stream"));
-              return;
-            }
-            controller.close();
-            return;
-          }
-          currentText += value;
-          let match = currentText.match(responseLineRE);
-          let parsedResponse;
-          while (match) {
-            try {
-              parsedResponse = JSON.parse(match[1]);
-            } catch (e) {
-              controller.error(new GoogleGenerativeAIError(`Error parsing JSON response: "${match[1]}"`));
-              return;
-            }
-            controller.enqueue(parsedResponse);
-            currentText = currentText.substring(match[0].length);
-            match = currentText.match(responseLineRE);
-          }
-          return pump();
-        });
-      }
-    }
-  });
-  return stream;
-}
-function aggregateResponses(responses) {
-  const lastResponse = responses[responses.length - 1];
-  const aggregatedResponse = {
-    promptFeedback: lastResponse === null || lastResponse === void 0 ? void 0 : lastResponse.promptFeedback
-  };
-  for (const response of responses) {
-    if (response.candidates) {
-      for (const candidate of response.candidates) {
-        const i = candidate.index;
-        if (!aggregatedResponse.candidates) {
-          aggregatedResponse.candidates = [];
-        }
-        if (!aggregatedResponse.candidates[i]) {
-          aggregatedResponse.candidates[i] = {
-            index: candidate.index
-          };
-        }
-        aggregatedResponse.candidates[i].citationMetadata = candidate.citationMetadata;
-        aggregatedResponse.candidates[i].groundingMetadata = candidate.groundingMetadata;
-        aggregatedResponse.candidates[i].finishReason = candidate.finishReason;
-        aggregatedResponse.candidates[i].finishMessage = candidate.finishMessage;
-        aggregatedResponse.candidates[i].safetyRatings = candidate.safetyRatings;
-        if (candidate.content && candidate.content.parts) {
-          if (!aggregatedResponse.candidates[i].content) {
-            aggregatedResponse.candidates[i].content = {
-              role: candidate.content.role || "user",
-              parts: []
-            };
-          }
-          const newPart = {};
-          for (const part of candidate.content.parts) {
-            if (part.text) {
-              newPart.text = part.text;
-            }
-            if (part.functionCall) {
-              newPart.functionCall = part.functionCall;
-            }
-            if (part.executableCode) {
-              newPart.executableCode = part.executableCode;
-            }
-            if (part.codeExecutionResult) {
-              newPart.codeExecutionResult = part.codeExecutionResult;
-            }
-            if (Object.keys(newPart).length === 0) {
-              newPart.text = "";
-            }
-            aggregatedResponse.candidates[i].content.parts.push(newPart);
-          }
-        }
-      }
-    }
-    if (response.usageMetadata) {
-      aggregatedResponse.usageMetadata = response.usageMetadata;
-    }
-  }
-  return aggregatedResponse;
-}
-async function generateContentStream(apiKey, model, params, requestOptions) {
-  const response = await makeModelRequest(
-    model,
-    Task.STREAM_GENERATE_CONTENT,
-    apiKey,
-    /* stream */
-    true,
-    JSON.stringify(params),
-    requestOptions
-  );
-  return processStream(response);
-}
-async function generateContent(apiKey, model, params, requestOptions) {
-  const response = await makeModelRequest(
-    model,
-    Task.GENERATE_CONTENT,
-    apiKey,
-    /* stream */
-    false,
-    JSON.stringify(params),
-    requestOptions
-  );
-  const responseJson = await response.json();
-  const enhancedResponse = addHelpers(responseJson);
-  return {
-    response: enhancedResponse
-  };
-}
-function formatSystemInstruction(input) {
-  if (input == null) {
-    return void 0;
-  } else if (typeof input === "string") {
-    return { role: "system", parts: [{ text: input }] };
-  } else if (input.text) {
-    return { role: "system", parts: [input] };
-  } else if (input.parts) {
-    if (!input.role) {
-      return { role: "system", parts: input.parts };
     } else {
-      return input;
+      container.createEl("div", {
+        cls: "sync-folder-info",
+        text: "No context folders selected."
+      });
     }
-  }
-}
-function formatNewContent(request) {
-  let newParts = [];
-  if (typeof request === "string") {
-    newParts = [{ text: request }];
-  } else {
-    for (const partOrString of request) {
-      if (typeof partOrString === "string") {
-        newParts.push({ text: partOrString });
-      } else {
-        newParts.push(partOrString);
-      }
-    }
-  }
-  return assignRoleToPartsAndValidateSendMessageRequest(newParts);
-}
-function assignRoleToPartsAndValidateSendMessageRequest(parts) {
-  const userContent = { role: "user", parts: [] };
-  const functionContent = { role: "function", parts: [] };
-  let hasUserContent = false;
-  let hasFunctionContent = false;
-  for (const part of parts) {
-    if ("functionResponse" in part) {
-      functionContent.parts.push(part);
-      hasFunctionContent = true;
-    } else {
-      userContent.parts.push(part);
-      hasUserContent = true;
-    }
-  }
-  if (hasUserContent && hasFunctionContent) {
-    throw new GoogleGenerativeAIError("Within a single message, FunctionResponse cannot be mixed with other type of part in the request for sending chat message.");
-  }
-  if (!hasUserContent && !hasFunctionContent) {
-    throw new GoogleGenerativeAIError("No content is provided for sending chat message.");
-  }
-  if (hasUserContent) {
-    return userContent;
-  }
-  return functionContent;
-}
-function formatCountTokensInput(params, modelParams) {
-  var _a;
-  let formattedGenerateContentRequest = {
-    model: modelParams === null || modelParams === void 0 ? void 0 : modelParams.model,
-    generationConfig: modelParams === null || modelParams === void 0 ? void 0 : modelParams.generationConfig,
-    safetySettings: modelParams === null || modelParams === void 0 ? void 0 : modelParams.safetySettings,
-    tools: modelParams === null || modelParams === void 0 ? void 0 : modelParams.tools,
-    toolConfig: modelParams === null || modelParams === void 0 ? void 0 : modelParams.toolConfig,
-    systemInstruction: modelParams === null || modelParams === void 0 ? void 0 : modelParams.systemInstruction,
-    cachedContent: (_a = modelParams === null || modelParams === void 0 ? void 0 : modelParams.cachedContent) === null || _a === void 0 ? void 0 : _a.name,
-    contents: []
-  };
-  const containsGenerateContentRequest = params.generateContentRequest != null;
-  if (params.contents) {
-    if (containsGenerateContentRequest) {
-      throw new GoogleGenerativeAIRequestInputError("CountTokensRequest must have one of contents or generateContentRequest, not both.");
-    }
-    formattedGenerateContentRequest.contents = params.contents;
-  } else if (containsGenerateContentRequest) {
-    formattedGenerateContentRequest = Object.assign(Object.assign({}, formattedGenerateContentRequest), params.generateContentRequest);
-  } else {
-    const content = formatNewContent(params);
-    formattedGenerateContentRequest.contents = [content];
-  }
-  return { generateContentRequest: formattedGenerateContentRequest };
-}
-function formatGenerateContentInput(params) {
-  let formattedRequest;
-  if (params.contents) {
-    formattedRequest = params;
-  } else {
-    const content = formatNewContent(params);
-    formattedRequest = { contents: [content] };
-  }
-  if (params.systemInstruction) {
-    formattedRequest.systemInstruction = formatSystemInstruction(params.systemInstruction);
-  }
-  return formattedRequest;
-}
-function formatEmbedContentInput(params) {
-  if (typeof params === "string" || Array.isArray(params)) {
-    const content = formatNewContent(params);
-    return { content };
-  }
-  return params;
-}
-var VALID_PART_FIELDS = [
-  "text",
-  "inlineData",
-  "functionCall",
-  "functionResponse",
-  "executableCode",
-  "codeExecutionResult"
-];
-var VALID_PARTS_PER_ROLE = {
-  user: ["text", "inlineData"],
-  function: ["functionResponse"],
-  model: ["text", "functionCall", "executableCode", "codeExecutionResult"],
-  // System instructions shouldn't be in history anyway.
-  system: ["text"]
-};
-function validateChatHistory(history) {
-  let prevContent = false;
-  for (const currContent of history) {
-    const { role, parts } = currContent;
-    if (!prevContent && role !== "user") {
-      throw new GoogleGenerativeAIError(`First content should be with role 'user', got ${role}`);
-    }
-    if (!POSSIBLE_ROLES.includes(role)) {
-      throw new GoogleGenerativeAIError(`Each item should include role field. Got ${role} but valid roles are: ${JSON.stringify(POSSIBLE_ROLES)}`);
-    }
-    if (!Array.isArray(parts)) {
-      throw new GoogleGenerativeAIError("Content should have 'parts' property with an array of Parts");
-    }
-    if (parts.length === 0) {
-      throw new GoogleGenerativeAIError("Each Content should have at least one part");
-    }
-    const countFields = {
-      text: 0,
-      inlineData: 0,
-      functionCall: 0,
-      functionResponse: 0,
-      fileData: 0,
-      executableCode: 0,
-      codeExecutionResult: 0
-    };
-    for (const part of parts) {
-      for (const key of VALID_PART_FIELDS) {
-        if (key in part) {
-          countFields[key] += 1;
-        }
-      }
-    }
-    const validParts = VALID_PARTS_PER_ROLE[role];
-    for (const key of VALID_PART_FIELDS) {
-      if (!validParts.includes(key) && countFields[key] > 0) {
-        throw new GoogleGenerativeAIError(`Content with role '${role}' can't contain '${key}' part`);
-      }
-    }
-    prevContent = true;
-  }
-}
-var SILENT_ERROR = "SILENT_ERROR";
-var ChatSession = class {
-  constructor(apiKey, model, params, _requestOptions = {}) {
-    this.model = model;
-    this.params = params;
-    this._requestOptions = _requestOptions;
-    this._history = [];
-    this._sendPromise = Promise.resolve();
-    this._apiKey = apiKey;
-    if (params === null || params === void 0 ? void 0 : params.history) {
-      validateChatHistory(params.history);
-      this._history = params.history;
-    }
-  }
-  /**
-   * Gets the chat history so far. Blocked prompts are not added to history.
-   * Blocked candidates are not added to history, nor are the prompts that
-   * generated them.
-   */
-  async getHistory() {
-    await this._sendPromise;
-    return this._history;
-  }
-  /**
-   * Sends a chat message and receives a non-streaming
-   * {@link GenerateContentResult}.
-   *
-   * Fields set in the optional {@link SingleRequestOptions} parameter will
-   * take precedence over the {@link RequestOptions} values provided to
-   * {@link GoogleGenerativeAI.getGenerativeModel }.
-   */
-  async sendMessage(request, requestOptions = {}) {
-    var _a, _b, _c, _d, _e, _f;
-    await this._sendPromise;
-    const newContent = formatNewContent(request);
-    const generateContentRequest = {
-      safetySettings: (_a = this.params) === null || _a === void 0 ? void 0 : _a.safetySettings,
-      generationConfig: (_b = this.params) === null || _b === void 0 ? void 0 : _b.generationConfig,
-      tools: (_c = this.params) === null || _c === void 0 ? void 0 : _c.tools,
-      toolConfig: (_d = this.params) === null || _d === void 0 ? void 0 : _d.toolConfig,
-      systemInstruction: (_e = this.params) === null || _e === void 0 ? void 0 : _e.systemInstruction,
-      cachedContent: (_f = this.params) === null || _f === void 0 ? void 0 : _f.cachedContent,
-      contents: [...this._history, newContent]
-    };
-    const chatSessionRequestOptions = Object.assign(Object.assign({}, this._requestOptions), requestOptions);
-    let finalResult;
-    this._sendPromise = this._sendPromise.then(() => generateContent(this._apiKey, this.model, generateContentRequest, chatSessionRequestOptions)).then((result) => {
-      var _a2;
-      if (result.response.candidates && result.response.candidates.length > 0) {
-        this._history.push(newContent);
-        const responseContent = Object.assign({
-          parts: [],
-          // Response seems to come back without a role set.
-          role: "model"
-        }, (_a2 = result.response.candidates) === null || _a2 === void 0 ? void 0 : _a2[0].content);
-        this._history.push(responseContent);
-      } else {
-        const blockErrorMessage = formatBlockErrorMessage(result.response);
-        if (blockErrorMessage) {
-          console.warn(`sendMessage() was unsuccessful. ${blockErrorMessage}. Inspect response object for details.`);
-        }
-      }
-      finalResult = result;
+    container.createEl("div", {
+      cls: "sync-corpus-info",
+      text: "Google Gemini API sync is disabled. Context stays local and is passed to the Antigravity CLI prompt."
     });
-    await this._sendPromise;
-    return finalResult;
-  }
-  /**
-   * Sends a chat message and receives the response as a
-   * {@link GenerateContentStreamResult} containing an iterable stream
-   * and a response promise.
-   *
-   * Fields set in the optional {@link SingleRequestOptions} parameter will
-   * take precedence over the {@link RequestOptions} values provided to
-   * {@link GoogleGenerativeAI.getGenerativeModel }.
-   */
-  async sendMessageStream(request, requestOptions = {}) {
-    var _a, _b, _c, _d, _e, _f;
-    await this._sendPromise;
-    const newContent = formatNewContent(request);
-    const generateContentRequest = {
-      safetySettings: (_a = this.params) === null || _a === void 0 ? void 0 : _a.safetySettings,
-      generationConfig: (_b = this.params) === null || _b === void 0 ? void 0 : _b.generationConfig,
-      tools: (_c = this.params) === null || _c === void 0 ? void 0 : _c.tools,
-      toolConfig: (_d = this.params) === null || _d === void 0 ? void 0 : _d.toolConfig,
-      systemInstruction: (_e = this.params) === null || _e === void 0 ? void 0 : _e.systemInstruction,
-      cachedContent: (_f = this.params) === null || _f === void 0 ? void 0 : _f.cachedContent,
-      contents: [...this._history, newContent]
-    };
-    const chatSessionRequestOptions = Object.assign(Object.assign({}, this._requestOptions), requestOptions);
-    const streamPromise = generateContentStream(this._apiKey, this.model, generateContentRequest, chatSessionRequestOptions);
-    this._sendPromise = this._sendPromise.then(() => streamPromise).catch((_ignored) => {
-      throw new Error(SILENT_ERROR);
-    }).then((streamResult) => streamResult.response).then((response) => {
-      if (response.candidates && response.candidates.length > 0) {
-        this._history.push(newContent);
-        const responseContent = Object.assign({}, response.candidates[0].content);
-        if (!responseContent.role) {
-          responseContent.role = "model";
-        }
-        this._history.push(responseContent);
-      } else {
-        const blockErrorMessage = formatBlockErrorMessage(response);
-        if (blockErrorMessage) {
-          console.warn(`sendMessageStream() was unsuccessful. ${blockErrorMessage}. Inspect response object for details.`);
-        }
-      }
-    }).catch((e) => {
-      if (e.message !== SILENT_ERROR) {
-        console.error(e);
-      }
-    });
-    return streamPromise;
-  }
-};
-async function countTokens(apiKey, model, params, singleRequestOptions) {
-  const response = await makeModelRequest(model, Task.COUNT_TOKENS, apiKey, false, JSON.stringify(params), singleRequestOptions);
-  return response.json();
-}
-async function embedContent(apiKey, model, params, requestOptions) {
-  const response = await makeModelRequest(model, Task.EMBED_CONTENT, apiKey, false, JSON.stringify(params), requestOptions);
-  return response.json();
-}
-async function batchEmbedContents(apiKey, model, params, requestOptions) {
-  const requestsWithModel = params.requests.map((request) => {
-    return Object.assign(Object.assign({}, request), { model });
-  });
-  const response = await makeModelRequest(model, Task.BATCH_EMBED_CONTENTS, apiKey, false, JSON.stringify({ requests: requestsWithModel }), requestOptions);
-  return response.json();
-}
-var GenerativeModel = class {
-  constructor(apiKey, modelParams, _requestOptions = {}) {
-    this.apiKey = apiKey;
-    this._requestOptions = _requestOptions;
-    if (modelParams.model.includes("/")) {
-      this.model = modelParams.model;
-    } else {
-      this.model = `models/${modelParams.model}`;
-    }
-    this.generationConfig = modelParams.generationConfig || {};
-    this.safetySettings = modelParams.safetySettings || [];
-    this.tools = modelParams.tools;
-    this.toolConfig = modelParams.toolConfig;
-    this.systemInstruction = formatSystemInstruction(modelParams.systemInstruction);
-    this.cachedContent = modelParams.cachedContent;
-  }
-  /**
-   * Makes a single non-streaming call to the model
-   * and returns an object containing a single {@link GenerateContentResponse}.
-   *
-   * Fields set in the optional {@link SingleRequestOptions} parameter will
-   * take precedence over the {@link RequestOptions} values provided to
-   * {@link GoogleGenerativeAI.getGenerativeModel }.
-   */
-  async generateContent(request, requestOptions = {}) {
-    var _a;
-    const formattedParams = formatGenerateContentInput(request);
-    const generativeModelRequestOptions = Object.assign(Object.assign({}, this._requestOptions), requestOptions);
-    return generateContent(this.apiKey, this.model, Object.assign({ generationConfig: this.generationConfig, safetySettings: this.safetySettings, tools: this.tools, toolConfig: this.toolConfig, systemInstruction: this.systemInstruction, cachedContent: (_a = this.cachedContent) === null || _a === void 0 ? void 0 : _a.name }, formattedParams), generativeModelRequestOptions);
-  }
-  /**
-   * Makes a single streaming call to the model and returns an object
-   * containing an iterable stream that iterates over all chunks in the
-   * streaming response as well as a promise that returns the final
-   * aggregated response.
-   *
-   * Fields set in the optional {@link SingleRequestOptions} parameter will
-   * take precedence over the {@link RequestOptions} values provided to
-   * {@link GoogleGenerativeAI.getGenerativeModel }.
-   */
-  async generateContentStream(request, requestOptions = {}) {
-    var _a;
-    const formattedParams = formatGenerateContentInput(request);
-    const generativeModelRequestOptions = Object.assign(Object.assign({}, this._requestOptions), requestOptions);
-    return generateContentStream(this.apiKey, this.model, Object.assign({ generationConfig: this.generationConfig, safetySettings: this.safetySettings, tools: this.tools, toolConfig: this.toolConfig, systemInstruction: this.systemInstruction, cachedContent: (_a = this.cachedContent) === null || _a === void 0 ? void 0 : _a.name }, formattedParams), generativeModelRequestOptions);
-  }
-  /**
-   * Gets a new {@link ChatSession} instance which can be used for
-   * multi-turn chats.
-   */
-  startChat(startChatParams) {
-    var _a;
-    return new ChatSession(this.apiKey, this.model, Object.assign({ generationConfig: this.generationConfig, safetySettings: this.safetySettings, tools: this.tools, toolConfig: this.toolConfig, systemInstruction: this.systemInstruction, cachedContent: (_a = this.cachedContent) === null || _a === void 0 ? void 0 : _a.name }, startChatParams), this._requestOptions);
-  }
-  /**
-   * Counts the tokens in the provided request.
-   *
-   * Fields set in the optional {@link SingleRequestOptions} parameter will
-   * take precedence over the {@link RequestOptions} values provided to
-   * {@link GoogleGenerativeAI.getGenerativeModel }.
-   */
-  async countTokens(request, requestOptions = {}) {
-    const formattedParams = formatCountTokensInput(request, {
-      model: this.model,
-      generationConfig: this.generationConfig,
-      safetySettings: this.safetySettings,
-      tools: this.tools,
-      toolConfig: this.toolConfig,
-      systemInstruction: this.systemInstruction,
-      cachedContent: this.cachedContent
-    });
-    const generativeModelRequestOptions = Object.assign(Object.assign({}, this._requestOptions), requestOptions);
-    return countTokens(this.apiKey, this.model, formattedParams, generativeModelRequestOptions);
-  }
-  /**
-   * Embeds the provided content.
-   *
-   * Fields set in the optional {@link SingleRequestOptions} parameter will
-   * take precedence over the {@link RequestOptions} values provided to
-   * {@link GoogleGenerativeAI.getGenerativeModel }.
-   */
-  async embedContent(request, requestOptions = {}) {
-    const formattedParams = formatEmbedContentInput(request);
-    const generativeModelRequestOptions = Object.assign(Object.assign({}, this._requestOptions), requestOptions);
-    return embedContent(this.apiKey, this.model, formattedParams, generativeModelRequestOptions);
-  }
-  /**
-   * Embeds an array of {@link EmbedContentRequest}s.
-   *
-   * Fields set in the optional {@link SingleRequestOptions} parameter will
-   * take precedence over the {@link RequestOptions} values provided to
-   * {@link GoogleGenerativeAI.getGenerativeModel }.
-   */
-  async batchEmbedContents(batchEmbedContentRequest, requestOptions = {}) {
-    const generativeModelRequestOptions = Object.assign(Object.assign({}, this._requestOptions), requestOptions);
-    return batchEmbedContents(this.apiKey, this.model, batchEmbedContentRequest, generativeModelRequestOptions);
-  }
-};
-var GoogleGenerativeAI = class {
-  constructor(apiKey) {
-    this.apiKey = apiKey;
-  }
-  /**
-   * Gets a {@link GenerativeModel} instance for the provided model name.
-   */
-  getGenerativeModel(modelParams, requestOptions) {
-    if (!modelParams.model) {
-      throw new GoogleGenerativeAIError(`Must provide a model name. Example: genai.getGenerativeModel({ model: 'my-model-name' })`);
-    }
-    return new GenerativeModel(this.apiKey, modelParams, requestOptions);
-  }
-  /**
-   * Creates a {@link GenerativeModel} instance from provided content cache.
-   */
-  getGenerativeModelFromCachedContent(cachedContent, modelParams, requestOptions) {
-    if (!cachedContent.name) {
-      throw new GoogleGenerativeAIRequestInputError("Cached content must contain a `name` field.");
-    }
-    if (!cachedContent.model) {
-      throw new GoogleGenerativeAIRequestInputError("Cached content must contain a `model` field.");
-    }
-    const disallowedDuplicates = ["model", "systemInstruction"];
-    for (const key of disallowedDuplicates) {
-      if ((modelParams === null || modelParams === void 0 ? void 0 : modelParams[key]) && cachedContent[key] && (modelParams === null || modelParams === void 0 ? void 0 : modelParams[key]) !== cachedContent[key]) {
-        if (key === "model") {
-          const modelParamsComp = modelParams.model.startsWith("models/") ? modelParams.model.replace("models/", "") : modelParams.model;
-          const cachedContentComp = cachedContent.model.startsWith("models/") ? cachedContent.model.replace("models/", "") : cachedContent.model;
-          if (modelParamsComp === cachedContentComp) {
-            continue;
-          }
-        }
-        throw new GoogleGenerativeAIRequestInputError(`Different value for "${key}" specified in modelParams (${modelParams[key]}) and cachedContent (${cachedContent[key]})`);
-      }
-    }
-    const modelParamsFromCache = Object.assign(Object.assign({}, modelParams), { model: cachedContent.model, tools: cachedContent.tools, toolConfig: cachedContent.toolConfig, systemInstruction: cachedContent.systemInstruction, cachedContent });
-    return new GenerativeModel(this.apiKey, modelParamsFromCache, requestOptions);
-  }
-};
-
-// src/gemini-service.ts
-var import_obsidian2 = require("obsidian");
-var API_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
-var UPLOAD_BASE_URL = "https://generativelanguage.googleapis.com/upload/v1beta";
-var GeminiService = class {
-  constructor(plugin) {
-    this.genAI = null;
-    this.model = null;
-    this.modelName = null;
-    this.chatHistory = [];
-    this.plugin = plugin;
-    this.initializeClient();
-  }
-  initializeClient() {
-    if (this.plugin.settings.apiKey) {
-      this.genAI = new GoogleGenerativeAI(this.plugin.settings.apiKey);
-      this.model = this.genAI.getGenerativeModel({ model: this.plugin.settings.model });
-      this.modelName = this.plugin.settings.model;
-    } else {
-      this.genAI = null;
-      this.model = null;
-      this.modelName = null;
-    }
-  }
-  refreshClient() {
-    this.initializeClient();
-  }
-  ensureCurrentModel() {
-    if (!this.plugin.settings.apiKey) {
-      this.genAI = null;
-      this.model = null;
-      this.modelName = null;
-      return;
-    }
-    if (!this.genAI || !this.model || this.modelName !== this.plugin.settings.model) {
-      this.initializeClient();
-    }
-  }
-  // Helper method to make API requests using Obsidian's requestUrl (bypasses CORS)
-  async apiRequest(url, method = "GET", body) {
-    try {
-      console.log(`[Gemini API] Request: ${method} ${url}`);
-      const params = {
-        url,
-        method,
-        headers: { "Content-Type": "application/json" }
-      };
-      if (body) {
-        params.body = JSON.stringify(body);
-      }
-      const response = await (0, import_obsidian2.requestUrl)(params);
-      return {
-        ok: response.status >= 200 && response.status < 300,
-        status: response.status,
-        data: response.json
-      };
-    } catch (error) {
-      console.error("API request error:", error);
-      if (error.response) {
-        return {
-          ok: false,
-          status: error.status || 500,
-          data: error.response
-        };
-      }
-      return {
-        ok: false,
-        status: 500,
-        data: { error: error.message }
-      };
-    }
-  }
-  async verifyApiKey() {
-    try {
-      if (!this.plugin.settings.apiKey)
-        return false;
-      const response = await this.apiRequest(
-        `${API_BASE_URL}/models?key=${this.plugin.settings.apiKey}`
-      );
-      return response.ok;
-    } catch (error) {
-      console.error("API key verification failed:", error);
-      return false;
-    }
-  }
-  async diagnoseFileSearchUpload() {
-    var _a, _b;
-    const keyFamily = this.getApiKeyFamily();
-    if (!this.plugin.settings.apiKey) {
-      return {
-        ok: false,
-        stage: "missing_api_key",
-        keyFamily,
-        message: "Gemini API key is missing.",
-        recommendation: "Add a Gemini API key in plugin settings first."
-      };
-    }
-    const modelsResponse = await this.apiRequest(
-      `${API_BASE_URL}/models?key=${this.plugin.settings.apiKey}`
-    );
-    if (!modelsResponse.ok) {
-      return this.buildDiagnosticFailure(
-        "models",
-        keyFamily,
-        modelsResponse.status,
-        modelsResponse.data,
-        "The key could not list Gemini models.",
-        "Create a valid Gemini API key in Google AI Studio and make sure the Gemini API is enabled for the project."
-      );
-    }
-    const storeName = await this.getDiagnosticStoreName(keyFamily);
-    if (!storeName) {
-      const storesResponse = await this.apiRequest(
-        `${API_BASE_URL}/fileSearchStores?key=${this.plugin.settings.apiKey}`
-      );
-      return this.buildDiagnosticFailure(
-        "file_search_store",
-        keyFamily,
-        storesResponse.status,
-        storesResponse.data,
-        "The key can call Gemini models, but cannot create or list File Search stores.",
-        this.getFileSearchRecommendation(keyFamily)
-      );
-    }
-    const upload = await this.uploadDiagnosticFile();
-    if (!upload.ok || !((_b = (_a = upload.data) == null ? void 0 : _a.file) == null ? void 0 : _b.name)) {
-      return this.buildDiagnosticFailure(
-        "files_upload",
-        keyFamily,
-        upload.status,
-        upload.data,
-        "The key can access File Search stores, but Files API upload failed.",
-        this.getFileSearchRecommendation(keyFamily)
-      );
-    }
-    const fileName = upload.data.file.name;
-    const imported = await this.importDiagnosticFile(storeName, fileName);
-    if (!imported.ok) {
-      return this.buildDiagnosticFailure(
-        "import_file",
-        keyFamily,
-        imported.status,
-        imported.data,
-        "The key uploaded a file, but File Search import failed.",
-        this.getFileSearchRecommendation(keyFamily)
-      );
-    }
-    return {
-      ok: true,
-      stage: "complete",
-      keyFamily,
-      status: imported.status,
-      message: "File Search upload diagnostics passed. This key can create stores, upload files, and import them for sync.",
-      detail: `Diagnostic store: ${storeName}`
-    };
-  }
-  async getDiagnosticStoreName(keyFamily) {
-    var _a;
-    const displayName = `${this.plugin.settings.corpusDisplayName || "Obsidian Vault"} Diagnostics`;
-    const listResponse = await this.apiRequest(
-      `${API_BASE_URL}/fileSearchStores?key=${this.plugin.settings.apiKey}`
-    );
-    if (listResponse.ok) {
-      const existing = (listResponse.data.fileSearchStores || []).find((store) => store.displayName === displayName);
-      if (existing == null ? void 0 : existing.name)
-        return existing.name;
-    } else if (listResponse.status === 403 && keyFamily === "AQ") {
-      return null;
-    }
-    const createResponse = await this.apiRequest(
-      `${API_BASE_URL}/fileSearchStores?key=${this.plugin.settings.apiKey}`,
-      "POST",
-      { displayName }
-    );
-    return createResponse.ok && ((_a = createResponse.data) == null ? void 0 : _a.name) ? createResponse.data.name : null;
-  }
-  async uploadDiagnosticFile() {
-    const boundary = "----MOKDiagnosticBoundary" + Math.random().toString(36).substring(2);
-    const displayName = "_mok-diagnostics-api-key-upload-test.md";
-    const content = [
-      "# Master of Knowledge File Search Diagnostic",
-      "",
-      "This tiny file verifies that the current API key can upload Markdown content to Gemini Files API."
-    ].join("\n");
-    const metadata = JSON.stringify({
-      file: {
-        displayName,
-        mimeType: "text/markdown"
-      }
-    });
-    let body = "";
-    body += `--${boundary}\r
-`;
-    body += 'Content-Disposition: form-data; name="metadata"\r\n';
-    body += "Content-Type: application/json\r\n\r\n";
-    body += `${metadata}\r
-`;
-    body += `--${boundary}\r
-`;
-    body += `Content-Disposition: form-data; name="file"; filename="${displayName}"\r
-`;
-    body += "Content-Type: text/markdown\r\n\r\n";
-    body += `${content}\r
-`;
-    body += `--${boundary}--`;
-    return this.requestUrlDiagnostic({
-      url: `${UPLOAD_BASE_URL}/files?uploadType=multipart&key=${this.plugin.settings.apiKey}`,
-      method: "POST",
-      headers: {
-        "Content-Type": `multipart/form-data; boundary=${boundary}`
-      },
-      body
-    });
-  }
-  async importDiagnosticFile(storeName, fileName) {
-    return this.requestUrlDiagnostic({
-      url: `${API_BASE_URL}/${storeName}:importFile?key=${this.plugin.settings.apiKey}`,
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ fileName })
-    });
-  }
-  async requestUrlDiagnostic(params) {
-    var _a;
-    try {
-      const response = await (0, import_obsidian2.requestUrl)(params);
-      return {
-        ok: response.status >= 200 && response.status < 300,
-        status: response.status,
-        data: response.json || response.text
-      };
-    } catch (error) {
-      const status = Number((error == null ? void 0 : error.status) || ((_a = error == null ? void 0 : error.response) == null ? void 0 : _a.status) || 500);
-      return {
-        ok: false,
-        status,
-        data: (error == null ? void 0 : error.response) || (error == null ? void 0 : error.message) || String(error)
-      };
-    }
-  }
-  buildDiagnosticFailure(stage, keyFamily, status, data, message, recommendation) {
-    return {
-      ok: false,
-      stage,
-      keyFamily,
-      status,
-      message,
-      detail: this.summarizeDiagnosticData(data),
-      recommendation
-    };
-  }
-  summarizeDiagnosticData(data) {
-    if (!data)
-      return "";
-    const text = typeof data === "string" ? data : JSON.stringify(data);
-    return text.length > 900 ? `${text.slice(0, 900)}...` : text;
-  }
-  getApiKeyFamily() {
-    const key = this.plugin.settings.apiKey.trim();
-    if (key.startsWith("AQ"))
-      return "AQ";
-    if (key.startsWith("AIza"))
-      return "AIza";
-    return "other";
-  }
-  getFileSearchRecommendation(keyFamily) {
-    if (keyFamily === "AQ") {
-      return "This looks like a new AQ Auth key. If model verification works but File Search upload/import returns 403, try an older AIza key if available or create a fresh Google Cloud project/key while Google resolves AQ File Search compatibility.";
-    }
-    return "Check that this key is allowed to use Gemini File Search and Files API endpoints. If API restrictions are enabled, allow the Gemini API and try a fresh key/project.";
-  }
-  // ==================== Corpus Management (FileSearchStores) ====================
-  async createCorpus(displayName) {
-    try {
-      const response = await this.apiRequest(
-        `${API_BASE_URL}/fileSearchStores?key=${this.plugin.settings.apiKey}`,
-        "POST",
-        { displayName }
-      );
-      if (!response.ok) {
-        console.error("Failed to create fileSearchStore:", response.data);
-        return null;
-      }
-      return response.data;
-    } catch (error) {
-      console.error("Create fileSearchStore error:", error);
-      return null;
-    }
-  }
-  async listCorpora() {
-    try {
-      const response = await this.apiRequest(
-        `${API_BASE_URL}/fileSearchStores?key=${this.plugin.settings.apiKey}`
-      );
-      if (!response.ok) {
-        console.error("Failed to list fileSearchStores");
-        return [];
-      }
-      return response.data.fileSearchStores || [];
-    } catch (error) {
-      console.error("List fileSearchStores error:", error);
-      return [];
-    }
-  }
-  async getOrCreateCorpus() {
-    if (this.plugin.settings.corpusName && this.plugin.settings.corpusName.startsWith("corpora/")) {
-      console.log("Migrating from legacy corpus to fileSearchStore...");
-      this.plugin.settings.corpusName = "";
-      await this.plugin.saveSettings();
-    }
-    if (this.plugin.settings.corpusName) {
-      console.log(`Verifying corpus: ${this.plugin.settings.corpusName}`);
-      try {
-        const response = await this.apiRequest(
-          `${API_BASE_URL}/${this.plugin.settings.corpusName}?key=${this.plugin.settings.apiKey}`
-        );
-        if (response.ok) {
-          console.log("Corpus verified.");
-          return this.plugin.settings.corpusName;
-        } else if (response.status === 404) {
-          console.warn("Corpus not found (404), clearing setting to recreate.");
-          this.plugin.settings.corpusName = "";
-          await this.plugin.saveSettings();
-        } else {
-          console.error("Error verifying corpus:", response.data);
-        }
-      } catch (error) {
-        console.error("Error checking corpus existence:", error);
-      }
-    }
-    const corpora = await this.listCorpora();
-    const existing = corpora.find(
-      (c) => c.displayName === this.plugin.settings.corpusDisplayName
-    );
-    if (existing) {
-      console.log(`Found existing corpus: ${existing.name}`);
-      this.plugin.settings.corpusName = existing.name;
-      await this.plugin.saveSettings();
-      return existing.name;
-    }
-    console.log(`Creating new corpus: ${this.plugin.settings.corpusDisplayName}`);
-    const newCorpus = await this.createCorpus(this.plugin.settings.corpusDisplayName);
-    if (newCorpus) {
-      this.plugin.settings.corpusName = newCorpus.name;
-      await this.plugin.saveSettings();
-      return newCorpus.name;
-    }
-    return null;
-  }
-  // ==================== Document Management ====================
-  /**
-   * Upload document using two-step workflow:
-   * 1. Upload to Files API with uploadType=multipart
-   * 2. Import to FileSearchStore using importFile
-   */
-  async uploadDocument(corpusName, filePath, content) {
-    try {
-      console.log(`[Gemini API] Uploading document: ${filePath} to ${corpusName}`);
-      const fileResult = await this.uploadToFilesApi(filePath, content);
-      if (!fileResult) {
-        console.error("[Gemini API] Failed to upload to Files API");
-        return null;
-      }
-      console.log(`[Gemini API] File uploaded: ${fileResult.name}`);
-      const documentInfo = await this.importFileToStore(corpusName, fileResult.name, filePath);
-      return documentInfo;
-    } catch (error) {
-      console.error("Upload document error:", error);
-      if (error.response) {
-        console.error("Error response:", error.response);
-      }
-      return null;
-    }
-  }
-  /**
-   * Upload file to Google Files API using multipart/form-data format
-   */
-  async uploadToFilesApi(displayName, content) {
-    try {
-      console.log(`[Gemini API] Step 1: Uploading to Files API...`);
-      const boundary = "----GeminiSyncBoundary" + Math.random().toString(36).substring(2);
-      const metadata = JSON.stringify({
-        file: {
-          displayName,
-          mimeType: "text/markdown"
-        }
-      });
-      let body = "";
-      body += `--${boundary}\r
-`;
-      body += `Content-Disposition: form-data; name="metadata"\r
-`;
-      body += `Content-Type: application/json\r
-\r
-`;
-      body += metadata + "\r\n";
-      body += `--${boundary}\r
-`;
-      body += `Content-Disposition: form-data; name="file"; filename="${displayName}"\r
-`;
-      body += `Content-Type: text/markdown\r
-\r
-`;
-      body += content + "\r\n";
-      body += `--${boundary}--`;
-      const url = `${UPLOAD_BASE_URL}/files?uploadType=multipart&key=${this.plugin.settings.apiKey}`;
-      console.log(`[Gemini API] Files API URL: ${url.replace(this.plugin.settings.apiKey, "API_KEY")}`);
-      console.log(`[Gemini API] Content length: ${content.length} bytes`);
-      const response = await (0, import_obsidian2.requestUrl)({
-        url,
-        method: "POST",
-        headers: {
-          "Content-Type": `multipart/form-data; boundary=${boundary}`
-        },
-        body
-      });
-      console.log(`[Gemini API] Files API response status: ${response.status}`);
-      if (response.status < 200 || response.status >= 300) {
-        console.error("[Gemini API] Files API error:", response.json || response.text);
-        return null;
-      }
-      const result = response.json;
-      console.log(`[Gemini API] Files API response:`, JSON.stringify(result));
-      if (result.file && result.file.name) {
-        return { name: result.file.name };
-      }
-      console.error("[Gemini API] Unexpected Files API response format");
-      return null;
-    } catch (error) {
-      console.error("[Gemini API] Files API upload error:", error);
-      return null;
-    }
-  }
-  /**
-   * Import a file from Files API to FileSearchStore
-   */
-  async importFileToStore(corpusName, fileName, displayName) {
-    try {
-      console.log(`[Gemini API] Step 2: Importing ${fileName} to ${corpusName}...`);
-      const url = `${API_BASE_URL}/${corpusName}:importFile?key=${this.plugin.settings.apiKey}`;
-      const response = await (0, import_obsidian2.requestUrl)({
-        url,
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          fileName
-        })
-      });
-      console.log(`[Gemini API] Import response status: ${response.status}`);
-      if (response.status < 200 || response.status >= 300) {
-        console.error("[Gemini API] Import error:", response.json || response.text);
-        return null;
-      }
-      const operation = response.json;
-      console.log(`[Gemini API] Import operation:`, JSON.stringify(operation));
-      if (operation.done === false && operation.name) {
-        const result = await this.waitForOperation(operation.name);
-        if (result) {
-          return {
-            ...result,
-            displayName
-          };
-        }
-        return null;
-      }
-      return {
-        name: operation.name || fileName.replace("files/", `${corpusName}/documents/`),
-        displayName,
-        createTime: new Date().toISOString(),
-        updateTime: new Date().toISOString()
-      };
-    } catch (error) {
-      console.error("[Gemini API] Import file error:", error);
-      return null;
-    }
-  }
-  /**
-   * Wait for a long-running operation to complete
-   */
-  async waitForOperation(operationName, maxRetries = 10) {
-    console.log(`[Gemini API] Waiting for operation: ${operationName}`);
-    for (let i = 0; i < maxRetries; i++) {
-      const waitTime = Math.min(1e3 * Math.pow(1.5, i), 1e4);
-      await new Promise((resolve) => setTimeout(resolve, waitTime));
-      try {
-        const response = await this.apiRequest(
-          `${API_BASE_URL}/${operationName}?key=${this.plugin.settings.apiKey}`
-        );
-        if (!response.ok) {
-          console.error("Failed to get operation status:", response.data);
-          continue;
-        }
-        const operation = response.data;
-        console.log(`[Gemini API] Operation status (attempt ${i + 1}):`, operation.done);
-        if (operation.done) {
-          if (operation.error) {
-            console.error("Operation failed:", operation.error);
-            return null;
-          }
-          const docResponse = operation.response;
-          return {
-            name: (docResponse == null ? void 0 : docResponse.name) || operationName.replace("/operations/", "/documents/"),
-            displayName: (docResponse == null ? void 0 : docResponse.displayName) || "",
-            createTime: (docResponse == null ? void 0 : docResponse.createTime) || new Date().toISOString(),
-            updateTime: (docResponse == null ? void 0 : docResponse.updateTime) || new Date().toISOString()
-          };
-        }
-      } catch (error) {
-        console.error(`Error checking operation status (attempt ${i + 1}):`, error);
-      }
-    }
-    console.error("Operation timed out");
-    return null;
-  }
-  async updateDocument(documentName, content) {
-    try {
-      console.log(`[Gemini API] Updating document: ${documentName}`);
-      const parts = documentName.split("/");
-      if (parts.length < 4) {
-        console.error("Invalid document name format:", documentName);
-        return false;
-      }
-      const corpusName = `${parts[0]}/${parts[1]}`;
-      let displayName = "updated_file.md";
-      const getResponse = await this.apiRequest(
-        `${API_BASE_URL}/${documentName}?key=${this.plugin.settings.apiKey}`
-      );
-      if (getResponse.ok && getResponse.data.displayName) {
-        displayName = getResponse.data.displayName;
-      }
-      await this.deleteDocument(documentName);
-      const newDoc = await this.uploadDocument(corpusName, displayName, content);
-      return !!newDoc;
-    } catch (error) {
-      console.error("Update document error:", error);
-      return false;
-    }
-  }
-  async deleteDocument(documentName) {
-    try {
-      const response = await this.apiRequest(
-        `${API_BASE_URL}/${documentName}?key=${this.plugin.settings.apiKey}`,
-        "DELETE"
-      );
-      return response.ok;
-    } catch (error) {
-      console.error("Delete document error:", error);
-      return false;
-    }
-  }
-  async listDocuments(corpusName) {
-    try {
-      const response = await this.apiRequest(
-        `${API_BASE_URL}/${corpusName}/documents?key=${this.plugin.settings.apiKey}`
-      );
-      if (!response.ok) {
-        console.error("Failed to list documents");
-        return [];
-      }
-      return response.data.documents || [];
-    } catch (error) {
-      console.error("List documents error:", error);
-      return [];
-    }
-  }
-  // ==================== Chat / RAG ====================
-  async chat(userMessage) {
-    this.ensureCurrentModel();
-    const logPath = await this.createChatLog(userMessage);
-    if (!this.plugin.settings.apiKey) {
-      await this.appendChatLog(logPath, {
-        event: "failed",
-        reason: "missing_api_key"
-      });
-      return {
-        role: "model",
-        content: "Gemini API \uD0A4\uAC00 \uC124\uC815\uB418\uC5B4 \uC788\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4. \uC124\uC815\uC5D0\uC11C API \uD0A4\uB97C \uC785\uB825\uD574 \uC8FC\uC138\uC694.",
-        logPath
-      };
-    }
-    try {
-      const fileSearchResponse = await this.chatWithFileSearch(userMessage, logPath);
-      if (fileSearchResponse) {
-        return fileSearchResponse;
-      }
-      if (!this.model) {
-        await this.appendChatLog(logPath, {
-          event: "failed",
-          reason: "model_not_initialized"
-        });
-        return {
-          role: "model",
-          content: "Gemini API \uD0A4\uAC00 \uC124\uC815\uB418\uC5B4 \uC788\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4. \uC124\uC815\uC5D0\uC11C API \uD0A4\uB97C \uC785\uB825\uD574 \uC8FC\uC138\uC694.",
-          logPath
-        };
-      }
-      await this.appendChatLog(logPath, {
-        event: "fallback_context_start",
-        reason: "file_search_unavailable",
-        syncedFileCount: this.getSyncedFileCount()
-      });
-      const context = await this.buildContext();
-      const systemPrompt = `You are a helpful assistant that answers questions based on the user's personal notes from their Obsidian vault.
-
-Here are the relevant notes for context:
-
-${context}
-
-Instructions:
-1. Answer questions based primarily on the provided notes.
-2. When referencing information from a note, cite it using the exact full vault path from the note header, using the format [Source: folder/note.md].
-3. If the information is not in the notes, you can provide general knowledge but clearly state that it's not from the notes.
-4. Answer in the same language as the user's latest message.
-5. If the user's latest message is Korean, answer naturally in Korean even when source notes contain English terms or titles.
-6. Preserve technical terms, product names, note titles, and quoted source phrases in their original language when needed.
-7. Never expose raw File Search IDs, opaque document IDs, random-looking source IDs, or internal URIs.
-8. Produce a complete, practical artifact rather than a thin outline. For lesson plans, include audience, goals, time plan, activity flow, teacher script, hands-on tasks, materials, and follow-up prompts.
-9. Be specific and useful. Avoid generic summaries when the user asks for a deliverable.`;
-      this.chatHistory.push({
-        role: "user",
-        parts: [{ text: userMessage }]
-      });
-      const chat = this.model.startChat({
-        history: [
-          {
-            role: "user",
-            parts: [{ text: systemPrompt }]
-          },
-          {
-            role: "model",
-            parts: [{ text: "\uC54C\uACA0\uC2B5\uB2C8\uB2E4. \uC0AC\uC6A9\uC790\uC758 \uCD5C\uC2E0 \uC9C8\uBB38 \uC5B8\uC5B4\uC5D0 \uB9DE\uCDB0 \uB2F5\uD558\uACE0, \uD2B9\uC815 \uB178\uD2B8\uB97C \uCC38\uC870\uD560 \uB54C\uB294 \uCD9C\uCC98\uB97C \uD45C\uC2DC\uD558\uACA0\uC2B5\uB2C8\uB2E4." }]
-          },
-          ...this.chatHistory.slice(0, -1)
-          // Previous history without current message
-        ]
-      });
-      const result = await this.sendMessageWithRetry(chat, userMessage);
-      const response = await result.response;
-      const text = response.text();
-      const usage = response.usageMetadata || {};
-      const outputTokens = Number(usage.candidatesTokenCount || this.plugin.estimateTokens(text));
-      const inputTokens = Number(
-        usage.promptTokenCount || Math.max(1, this.plugin.estimateTokens(`${systemPrompt}
-${userMessage}`))
-      );
-      await this.plugin.recordBudgetUsage({
-        type: "chat",
-        model: this.plugin.settings.model,
-        inputTokens,
-        outputTokens,
-        estimatedCostUsd: this.plugin.estimateGeminiCost(this.plugin.settings.model, inputTokens, outputTokens),
-        success: true
-      });
-      const cleanedText = this.cleanGeneratedSourceNoise(text);
-      const citations = await this.recoverSyncedCitations(
-        userMessage,
-        text,
-        this.extractCitations(text)
-      );
-      await this.appendChatLog(logPath, {
-        event: "fallback_context_success",
-        inputTokens,
-        outputTokens,
-        estimatedCostUsd: this.plugin.estimateGeminiCost(this.plugin.settings.model, inputTokens, outputTokens),
-        citationCount: citations.length,
-        sourcePaths: citations.map((citation) => citation.sourcePath),
-        responsePreview: this.preview(cleanedText, 1e3)
-      });
-      this.chatHistory.push({
-        role: "model",
-        parts: [{ text: cleanedText }]
-      });
-      return {
-        role: "model",
-        content: cleanedText,
-        citations,
-        logPath
-      };
-    } catch (error) {
-      console.error("Chat error:", error);
-      await this.appendChatLog(logPath, {
-        event: "failed",
-        message: error instanceof Error ? error.message : String(error)
-      });
-      return {
-        role: "model",
-        content: this.formatChatError(error),
-        logPath
-      };
-    }
-  }
-  async chatWithFileSearch(userMessage, logPath) {
-    var _a, _b;
-    const corpusName = this.plugin.settings.corpusName || await this.getOrCreateCorpus();
-    if (!corpusName) {
-      await this.appendChatLog(logPath, {
-        event: "file_search_skipped",
-        reason: "missing_file_search_store"
-      });
-      return null;
-    }
-    const input = this.buildFileSearchPrompt(userMessage);
-    await this.appendChatLog(logPath, {
-      event: "file_search_start",
-      corpusName,
-      inputTokensEstimate: this.plugin.estimateTokens(input)
-    });
-    try {
-      const response = await this.apiRequest(
-        `${API_BASE_URL}/interactions?key=${this.plugin.settings.apiKey}`,
-        "POST",
-        {
-          model: this.plugin.settings.model,
-          input: [{ type: "text", text: input }],
-          tools: [{
-            type: "file_search",
-            file_search_store_names: [corpusName]
-          }]
-        }
-      );
-      if (!response.ok) {
-        console.warn("File Search interaction failed, falling back to local context:", response.data);
-        await this.appendChatLog(logPath, {
-          event: "file_search_failed",
-          status: response.status,
-          errorPreview: this.preview(JSON.stringify(response.data), 1e3)
-        });
-        return null;
-      }
-      const { text, citations } = this.extractInteractionOutput(response.data);
-      if (!text.trim()) {
-        await this.appendChatLog(logPath, {
-          event: "file_search_empty",
-          status: response.status
-        });
-        return null;
-      }
-      const recoveredCitations = await this.recoverSyncedCitations(
-        userMessage,
-        text,
-        citations
-      );
-      const cleanedText = this.cleanGeneratedSourceNoise(text);
-      const usage = ((_a = response.data) == null ? void 0 : _a.usageMetadata) || ((_b = response.data) == null ? void 0 : _b.usage_metadata) || {};
-      const outputTokens = Number(usage.candidatesTokenCount || usage.outputTokenCount || this.plugin.estimateTokens(cleanedText));
-      const inputTokens = Number(usage.promptTokenCount || usage.inputTokenCount || this.plugin.estimateTokens(input));
-      await this.plugin.recordBudgetUsage({
-        type: "chat",
-        model: this.plugin.settings.model,
-        inputTokens,
-        outputTokens,
-        estimatedCostUsd: this.plugin.estimateGeminiCost(this.plugin.settings.model, inputTokens, outputTokens),
-        success: true
-      });
-      this.chatHistory.push({
-        role: "user",
-        parts: [{ text: userMessage }]
-      });
-      this.chatHistory.push({
-        role: "model",
-        parts: [{ text: cleanedText }]
-      });
-      await this.appendChatLog(logPath, {
-        event: "file_search_success",
-        inputTokens,
-        outputTokens,
-        estimatedCostUsd: this.plugin.estimateGeminiCost(this.plugin.settings.model, inputTokens, outputTokens),
-        annotationCitationCount: citations.length,
-        recoveredCitationCount: recoveredCitations.length,
-        sourcePaths: recoveredCitations.map((citation) => citation.sourcePath),
-        rawResponsePreview: this.preview(text, 1e3),
-        cleanedResponsePreview: this.preview(cleanedText, 1e3)
-      });
-      return {
-        role: "model",
-        content: cleanedText,
-        citations: recoveredCitations,
-        logPath
-      };
-    } catch (error) {
-      console.warn("File Search interaction error, falling back to local context:", error);
-      await this.appendChatLog(logPath, {
-        event: "file_search_error",
-        message: error instanceof Error ? error.message : String(error)
-      });
-      return null;
-    }
-  }
-  async createChatLog(userMessage) {
-    const folder = await this.plugin.ensureWorkspaceFolder("logs");
-    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-    const path = `${folder}/chat-${stamp}.jsonl`;
-    const initial = {
-      event: "start",
-      timestamp: new Date().toISOString(),
-      model: this.plugin.settings.model,
-      corpusName: this.plugin.settings.corpusName || "",
-      syncFolders: this.plugin.settings.syncFolders,
-      syncedFileCount: this.getSyncedFileCount(),
-      promptPreview: this.preview(userMessage, 500)
-    };
-    await this.plugin.app.vault.create(path, `${JSON.stringify(initial)}
-`);
-    return path;
-  }
-  async appendChatLog(path, event) {
-    try {
-      const file = this.plugin.app.vault.getAbstractFileByPath(path);
-      if (!(file instanceof import_obsidian2.TFile))
-        return;
-      await this.plugin.app.vault.append(file, `${JSON.stringify({
-        timestamp: new Date().toISOString(),
-        ...event
-      })}
-`);
-    } catch (error) {
-      console.warn("Failed to append Chat log:", error);
-    }
-  }
-  preview(value, maxLength) {
-    return value.length > maxLength ? `${value.slice(0, maxLength)}...[truncated]` : value;
-  }
-  getSyncedFileCount() {
-    return Object.keys(this.plugin.settings.files).filter((path) => {
-      const syncData = this.plugin.settings.files[path];
-      return (syncData == null ? void 0 : syncData.status) === "synced" && this.plugin.isInSyncFolder(path);
-    }).length;
-  }
-  buildFileSearchPrompt(userMessage) {
-    return [
-      "You are Master of Knowledge, an Obsidian knowledge assistant.",
-      "Use the File Search tool as the primary source of truth for the user's synced Obsidian notes.",
-      "Answer in the same language as the user's latest message. If the user writes Korean, answer naturally in Korean.",
-      "Never expose raw File Search IDs, opaque document IDs, random-looking source IDs, or internal URIs.",
-      'Do not add a manual "Source notes" section with opaque IDs. The app will render source note buttons separately.',
-      "When citing inside the prose, cite only real note titles or real vault paths. If the real title/path is not available, omit the citation from the prose.",
-      "When the File Search result does not support the answer, say that clearly instead of guessing.",
-      "Produce a complete, practical artifact rather than a thin outline. For lesson plans, include audience, goals, time plan, activity flow, teacher script, hands-on tasks, materials, and follow-up prompts.",
-      "Ground recommendations in the retrieved notes, then add clearly labeled general suggestions only when useful.",
-      "",
-      "User request:",
-      userMessage
-    ].join("\n");
-  }
-  extractInteractionOutput(data) {
-    const texts = [];
-    const citations = [];
-    const steps = Array.isArray(data == null ? void 0 : data.steps) ? data.steps : [];
-    for (const step of steps) {
-      if ((step == null ? void 0 : step.type) !== "model_output")
-        continue;
-      const contentBlocks = Array.isArray(step.content) ? step.content : [];
-      for (const block of contentBlocks) {
-        if ((block == null ? void 0 : block.type) === "text" && typeof block.text === "string") {
-          texts.push(block.text);
-        }
-        const annotations = Array.isArray(block == null ? void 0 : block.annotations) ? block.annotations : [];
-        for (const annotation of annotations) {
-          const citation = this.citationFromFileSearchAnnotation(annotation);
-          if (citation && !citations.find((existing) => existing.sourcePath === citation.sourcePath)) {
-            citations.push(citation);
-          }
-        }
-      }
-    }
-    return { text: texts.join("\n\n").trim(), citations };
-  }
-  citationFromFileSearchAnnotation(annotation) {
-    if (!annotation || annotation.type !== "file_citation")
-      return null;
-    const candidates = [
-      annotation.file_name,
-      annotation.fileName,
-      annotation.source,
-      annotation.uri,
-      annotation.document_name,
-      annotation.documentName
-    ].filter((value) => typeof value === "string" && value.trim().length > 0);
-    for (const candidate of candidates) {
-      const path = this.resolveSyncedCitationPath(candidate);
-      if (path) {
-        return {
-          sourceId: path,
-          sourcePath: path,
-          content: ""
-        };
-      }
-      const byUri = this.resolveSyncedCitationUri(candidate);
-      if (byUri) {
-        return {
-          sourceId: byUri,
-          sourcePath: byUri,
-          content: ""
-        };
-      }
-    }
-    return null;
-  }
-  resolveSyncedCitationUri(uri) {
-    const normalizedUri = this.normalizeCitationPath(uri);
-    const uriTail = normalizedUri.split("/").pop() || normalizedUri;
-    for (const path in this.plugin.settings.files) {
-      const syncData = this.plugin.settings.files[path];
-      if (syncData.status !== "synced")
-        continue;
-      if (!this.plugin.isInSyncFolder(path))
-        continue;
-      const normalizedSyncUri = this.normalizeCitationPath(syncData.uri || "");
-      if (!normalizedSyncUri)
-        continue;
-      const syncUriTail = normalizedSyncUri.split("/").pop() || normalizedSyncUri;
-      if (syncData.uri === uri || uri.includes(syncData.uri) || normalizedUri.includes(normalizedSyncUri) || !!uriTail && uriTail === syncUriTail || !!syncUriTail && normalizedUri.includes(syncUriTail)) {
-        return path;
-      }
-    }
-    return null;
-  }
-  cleanGeneratedSourceNoise(text) {
-    const lines = text.split("\n");
-    const cleaned = [];
-    let skippingGeneratedSources = false;
-    for (const line of lines) {
-      const trimmed = line.trim();
-      const startsGeneratedSourceBlock = /^#{1,4}\s*(활용한\s*)?(source|sources|출처|참고\s*노트|source\s*노트|source\s*notes?|노트\s*정보)/i.test(trimmed) || /^[-*]\s*`?[a-z0-9]{8,}`?\s*(\/|:|,)/i.test(trimmed);
-      if (startsGeneratedSourceBlock) {
-        skippingGeneratedSources = true;
-        continue;
-      }
-      if (skippingGeneratedSources) {
-        if (/^#{1,3}\s+\S/.test(trimmed) || /^---+$/.test(trimmed)) {
-          skippingGeneratedSources = false;
-        } else if (!trimmed || /^[-*]\s*`?[a-z0-9]{8,}`?/i.test(trimmed)) {
-          continue;
-        } else if (/`?[a-z0-9]{8,}`?\s*(\/|,)/i.test(trimmed) && !trimmed.includes(".md")) {
-          continue;
-        } else {
-          skippingGeneratedSources = false;
-        }
-      }
-      cleaned.push(line);
-    }
-    return cleaned.join("\n").replace(/\n{3,}/g, "\n\n").trim();
-  }
-  async recoverSyncedCitations(userMessage, text, parsedCitations) {
-    const citations = [...parsedCitations];
-    const explicit = this.extractCitations(text);
-    for (const citation of explicit) {
-      if (!citations.find((existing) => existing.sourcePath === citation.sourcePath)) {
-        citations.push(citation);
-      }
-    }
-    const opaqueIds = this.extractOpaqueSourceIds(text);
-    for (const id of opaqueIds) {
-      const byUri = this.resolveSyncedCitationUri(id);
-      const byPath = this.resolveSyncedCitationPath(id);
-      const sourcePath = byUri || byPath;
-      if (sourcePath && !citations.find((existing) => existing.sourcePath === sourcePath)) {
-        citations.push({ sourceId: sourcePath, sourcePath, content: "" });
-      }
-    }
-    const scored = await this.rankSyncedNotes(`${userMessage}
-${text}`, 5);
-    for (const sourcePath of scored) {
-      if (!citations.find((existing) => existing.sourcePath === sourcePath)) {
-        citations.push({ sourceId: sourcePath, sourcePath, content: "" });
-      }
-      if (citations.length >= 5)
-        break;
-    }
-    return citations;
-  }
-  extractOpaqueSourceIds(text) {
-    const ids = /* @__PURE__ */ new Set();
-    const patterns = [
-      /`([a-z0-9]{8,})`/gi,
-      /\b([a-z0-9]{10,})\b/gi
-    ];
-    for (const pattern of patterns) {
-      let match;
-      while ((match = pattern.exec(text)) !== null) {
-        const value = match[1];
-        if (value && !/^\d+$/.test(value))
-          ids.add(value);
-      }
-    }
-    return Array.from(ids);
-  }
-  async rankSyncedNotes(query, limit) {
-    const tokens = this.tokenizeForSearch(query);
-    if (tokens.length === 0)
-      return [];
-    const scored = [];
-    for (const path in this.plugin.settings.files) {
-      const syncData = this.plugin.settings.files[path];
-      if (syncData.status !== "synced")
-        continue;
-      if (!this.plugin.isInSyncFolder(path))
-        continue;
-      const file = this.plugin.app.vault.getAbstractFileByPath(path);
-      if (!(file instanceof import_obsidian2.TFile) || file.extension !== "md")
-        continue;
-      try {
-        const content = await this.plugin.app.vault.read(file);
-        const haystack = `${file.basename}
-${file.path}
-${content.slice(0, 5e3)}`.toLowerCase();
-        let score = 0;
-        for (const token of tokens) {
-          if (file.basename.toLowerCase().includes(token))
-            score += 8;
-          if (file.path.toLowerCase().includes(token))
-            score += 5;
-          const matches = haystack.split(token).length - 1;
-          score += Math.min(matches, 6);
-        }
-        if (score > 0)
-          scored.push({ path: file.path, score });
-      } catch (error) {
-        console.warn(`Failed to rank synced note: ${path}`, error);
-      }
-    }
-    return scored.sort((a, b) => b.score - a.score || a.path.localeCompare(b.path)).slice(0, limit).map((item) => item.path);
-  }
-  tokenizeForSearch(text) {
-    const tokens = /* @__PURE__ */ new Set();
-    const normalized = text.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, " ");
-    for (const raw of normalized.split(/\s+/)) {
-      const token = raw.trim();
-      if (token.length < 2)
-        continue;
-      if (/^\d+$/.test(token))
-        continue;
-      if (this.isStopToken(token))
-        continue;
-      tokens.add(token);
-      if (tokens.size >= 32)
-        break;
-    }
-    return Array.from(tokens);
-  }
-  isStopToken(token) {
-    return (/* @__PURE__ */ new Set([
-      "the",
-      "and",
-      "for",
-      "with",
-      "from",
-      "that",
-      "this",
-      "you",
-      "your",
-      "are",
-      "was",
-      "were",
-      "have",
-      "has",
-      "not",
-      "can",
-      "will",
-      "\uB300\uD55C",
-      "\uAD00\uB828",
-      "\uC791\uC131",
-      "\uB0B4\uC6A9",
-      "\uB178\uD2B8",
-      "\uD65C\uC6A9",
-      "\uC0AC\uC6A9\uC790",
-      "\uCD08\uC548",
-      "\uC788\uC2B5\uB2C8\uB2E4",
-      "\uD569\uB2C8\uB2E4",
-      "\uC704\uD55C",
-      "\uC5D0\uAC8C",
-      "\uC5D0\uC11C",
-      "\uC73C\uB85C",
-      "\uADF8\uB9AC\uACE0"
-    ])).has(token);
-  }
-  async sendMessageWithRetry(chat, userMessage) {
-    let lastError;
-    for (let attempt = 0; attempt < 3; attempt++) {
-      try {
-        return await chat.sendMessage(userMessage);
-      } catch (error) {
-        lastError = error;
-        if (!this.isRetryableGeminiError(error) || attempt === 2)
-          break;
-        await new Promise((resolve) => setTimeout(resolve, 600 * Math.pow(2, attempt)));
-      }
-    }
-    throw lastError;
-  }
-  isRetryableGeminiError(error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return /\[(500|502|503|504)\]/.test(message) || /internal error|overloaded|unavailable/i.test(message);
-  }
-  formatChatError(error) {
-    const message = error instanceof Error ? error.message : String(error || "Unknown error occurred");
-    const model = this.plugin.settings.model;
-    if (this.isRetryableGeminiError(error)) {
-      return [
-        `Gemini \uBAA8\uB378 \uD638\uCD9C\uC774 \uC77C\uC2DC\uC801\uC73C\uB85C \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4. \uD604\uC7AC \uBAA8\uB378: \`${model}\`.`,
-        "Google API\uC5D0\uC11C 500/\uC77C\uC2DC \uC7A5\uC560 \uC751\uB2F5\uC744 \uBC18\uD658\uD588\uC2B5\uB2C8\uB2E4. \uD50C\uB7EC\uADF8\uC778\uC774 \uC790\uB3D9 \uC7AC\uC2DC\uB3C4\uD588\uC9C0\uB9CC \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.",
-        "\uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD558\uAC70\uB098, \uAE09\uD558\uBA74 \uC124\uC815\uC5D0\uC11C \uB2E4\uB978 \uBAA8\uB378\uB85C \uBC14\uAFD4 \uC8FC\uC138\uC694.",
-        "",
-        `\uC6D0\uBCF8 \uC624\uB958: ${message}`
-      ].join("\n");
-    }
-    return `Gemini \uC694\uCCAD \uC2E4\uD328. \uD604\uC7AC \uBAA8\uB378: \`${model}\`.
-
-${message}`;
-  }
-  async buildContext() {
-    const files = this.plugin.settings.files;
-    const contexts = [];
-    for (const path in files) {
-      if (files[path].status === "synced" && this.plugin.isInSyncFolder(path)) {
-        try {
-          const file = this.plugin.app.vault.getAbstractFileByPath(path);
-          if (file && file instanceof import_obsidian2.TFile && file.extension === "md") {
-            const content = await this.plugin.app.vault.read(file);
-            const truncated = content.length > 2e3 ? content.substring(0, 2e3) + "...[truncated]" : content;
-            contexts.push(`--- ${path} ---
-${truncated}
-`);
-          }
-        } catch (e) {
-          console.error(`Failed to read file ${path}:`, e);
-        }
-      }
-    }
-    let totalContext = contexts.join("\n");
-    if (totalContext.length > 3e4) {
-      totalContext = totalContext.substring(0, 3e4) + "\n...[context truncated due to length]";
-    }
-    return totalContext || "No synced notes available.";
-  }
-  extractCitations(text) {
-    const citations = [];
-    const pattern = /\[Source:\s*([^\]]+)\]/g;
-    let match;
-    while ((match = pattern.exec(text)) !== null) {
-      const sourcePath = this.resolveSyncedCitationPath(match[1] || "");
-      if (sourcePath && !citations.find((c) => c.sourcePath === sourcePath)) {
-        citations.push({
-          sourceId: sourcePath,
-          sourcePath,
-          content: ""
-        });
-      }
-    }
-    return citations;
-  }
-  resolveSyncedCitationPath(rawPath) {
-    const cleaned = rawPath.trim().replace(/^["']|["']$/g, "").split("|")[0].trim();
-    if (!cleaned)
-      return null;
-    const candidates = [cleaned];
-    if (!cleaned.endsWith(".md"))
-      candidates.push(`${cleaned}.md`);
-    const normalizedCandidates = new Set(candidates.map((path) => this.normalizeCitationPath(path)));
-    for (const path in this.plugin.settings.files) {
-      if (this.plugin.settings.files[path].status !== "synced")
-        continue;
-      if (!this.plugin.isInSyncFolder(path))
-        continue;
-      const file = this.plugin.app.vault.getAbstractFileByPath(path);
-      if (!(file instanceof import_obsidian2.TFile))
-        continue;
-      const normalizedPath = this.normalizeCitationPath(file.path);
-      const normalizedName = this.normalizeCitationPath(file.name);
-      if (normalizedCandidates.has(normalizedPath) || normalizedCandidates.has(normalizedName) || Array.from(normalizedCandidates).some((candidate) => normalizedPath.endsWith(candidate))) {
-        return file.path;
-      }
-    }
-    return null;
-  }
-  normalizeCitationPath(path) {
-    return path.replace(/\\/g, "/").replace(/^\/+/, "").toLowerCase();
-  }
-  clearChatHistory() {
-    this.chatHistory = [];
-  }
-  // ==================== Semantic Retrieval (Alternative approach) ====================
-  async queryCorpus(query) {
-    if (!this.plugin.settings.corpusName) {
-      return { results: [] };
-    }
-    try {
-      const response = await this.apiRequest(
-        `${API_BASE_URL}/${this.plugin.settings.corpusName}:query?key=${this.plugin.settings.apiKey}`,
-        "POST",
-        {
-          query,
-          resultsCount: 5
-        }
-      );
-      if (!response.ok) {
-        console.error("Query corpus failed");
-        return { results: [] };
-      }
-      return response.data;
-    } catch (error) {
-      console.error("Query corpus error:", error);
-      return { results: [] };
-    }
-  }
-};
-
-// src/sync-engine.ts
-var import_obsidian3 = require("obsidian");
-var SyncEngine = class {
-  constructor(plugin, geminiService) {
-    this.syncQueue = /* @__PURE__ */ new Map();
-    this.isSyncing = false;
-    this.plugin = plugin;
-    this.geminiService = geminiService;
-    this.debouncedProcessQueue = (0, import_obsidian3.debounce)(
-      () => this.processQueue(),
-      this.plugin.settings.syncDebounceMs,
-      true
-    );
-  }
-  // ==================== Hash Utilities ====================
-  async calculateHash(content) {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(content);
-    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-  }
-  // ==================== File Event Handlers ====================
-  async handleFileCreate(file) {
-    if (!this.plugin.settings.autoSync)
-      return;
-    console.log(`[SyncEngine] File created: ${file.path}`);
-    this.addToQueue(file);
-  }
-  async handleFileModify(file) {
-    if (!this.plugin.settings.autoSync)
-      return;
-    console.log(`[SyncEngine] File modified: ${file.path}`);
-    this.addToQueue(file);
-  }
-  async handleFileDelete(file) {
-    console.log(`[SyncEngine] File deleted: ${file.path}`);
-    const fileData = this.plugin.settings.files[file.path];
-    if (fileData && fileData.uri) {
-      this.plugin.updateStatusBar("Deleting...");
-      const success = await this.geminiService.deleteDocument(fileData.uri);
-      if (success) {
-        delete this.plugin.settings.files[file.path];
-        await this.plugin.saveSettings();
-        console.log(`[SyncEngine] Successfully deleted from Gemini: ${file.path}`);
-      } else {
-        console.error(`[SyncEngine] Failed to delete from Gemini: ${file.path}`);
-      }
-      this.plugin.updateStatusBar("Ready");
-    }
-  }
-  async handleFileRename(file, oldPath) {
-    console.log(`[SyncEngine] File renamed: ${oldPath} -> ${file.path}`);
-    const oldFileData = this.plugin.settings.files[oldPath];
-    if (oldFileData && oldFileData.uri) {
-      await this.geminiService.deleteDocument(oldFileData.uri);
-      delete this.plugin.settings.files[oldPath];
-    }
-    if (this.plugin.shouldSync(file)) {
-      this.addToQueue(file);
-    }
-    await this.plugin.saveSettings();
-  }
-  // ==================== Queue Management ====================
-  addToQueue(file) {
-    this.syncQueue.set(file.path, file);
-    this.debouncedProcessQueue();
-  }
-  async processQueue() {
-    if (this.isSyncing || this.syncQueue.size === 0)
-      return;
-    this.isSyncing = true;
-    this.plugin.updateStatusBar(`Syncing (${this.syncQueue.size})...`);
-    const corpusName = await this.geminiService.getOrCreateCorpus();
-    if (!corpusName) {
-      console.error("[SyncEngine] Failed to get/create corpus");
-      new import_obsidian3.Notice("Failed to connect to Gemini. Check your API key.");
-      this.isSyncing = false;
-      this.plugin.updateStatusBar("Error");
-      return;
-    }
-    const entries = Array.from(this.syncQueue.entries());
-    this.syncQueue.clear();
-    let successCount = 0;
-    let errorCount = 0;
-    for (const [path, file] of entries) {
-      try {
-        if (!this.plugin.shouldSync(file)) {
-          console.log(`[SyncEngine] Skipping ${path} - no longer in selected sync folders`);
-          continue;
-        }
-        const success = await this.syncFile(file, corpusName);
-        if (success) {
-          successCount++;
-        } else {
-          errorCount++;
-        }
-      } catch (error) {
-        console.error(`[SyncEngine] Error syncing ${path}:`, error);
-        errorCount++;
-      }
-      await this.delay(200);
-    }
-    this.isSyncing = false;
-    if (errorCount > 0) {
-      this.plugin.updateStatusBar(`Done (${errorCount} errors)`);
-      setTimeout(() => this.plugin.updateStatusBar("Ready"), 3e3);
-    } else {
-      this.plugin.updateStatusBar("Ready");
-    }
-    this.plugin.updateChatViewSyncStatus();
-    console.log(`[SyncEngine] Queue processed: ${successCount} success, ${errorCount} errors`);
-  }
-  // ==================== File Sync Logic ====================
-  async syncFile(file, corpusName) {
-    try {
-      const content = await this.plugin.app.vault.read(file);
-      const newHash = await this.calculateHash(content);
-      const existingData = this.plugin.settings.files[file.path];
-      if (existingData && existingData.hash === newHash) {
-        console.log(`[SyncEngine] Skipping ${file.path} - no changes`);
-        return true;
-      }
-      if (existingData && existingData.uri) {
-        console.log(`[SyncEngine] Updating ${file.path}`);
-        const success = await this.geminiService.updateDocument(existingData.uri, content);
-        if (success) {
-          this.plugin.settings.files[file.path] = {
-            ...existingData,
-            hash: newHash,
-            lastSynced: Date.now(),
-            status: "synced"
-          };
-          await this.plugin.saveSettings();
-          return true;
-        } else {
-          this.plugin.settings.files[file.path] = {
-            ...existingData,
-            status: "error"
-          };
-          await this.plugin.saveSettings();
-          return false;
-        }
-      } else {
-        console.log(`[SyncEngine] Uploading ${file.path}`);
-        const document2 = await this.geminiService.uploadDocument(corpusName, file.path, content);
-        if (document2) {
-          this.plugin.settings.files[file.path] = {
-            uri: document2.name,
-            hash: newHash,
-            lastSynced: Date.now(),
-            status: "synced"
-          };
-          await this.plugin.saveSettings();
-          return true;
-        } else {
-          this.plugin.settings.files[file.path] = {
-            uri: "",
-            hash: "",
-            lastSynced: Date.now(),
-            status: "error"
-          };
-          await this.plugin.saveSettings();
-          return false;
-        }
-      }
-    } catch (error) {
-      console.error(`[SyncEngine] Error syncing ${file.path}:`, error);
-      return false;
-    }
-  }
-  // ==================== Bulk Sync Operations ====================
-  async initialSync() {
-    console.log("[SyncEngine] Starting initial sync...");
-    if (this.plugin.settings.syncFolders.length === 0) {
-      console.log("[SyncEngine] No sync folders configured");
-      return;
-    }
-    const files = this.getFilesInSyncFolder();
-    console.log(`[SyncEngine] Found ${files.length} files to check`);
-    for (const file of files) {
-      const existingData = this.plugin.settings.files[file.path];
-      if (!existingData || existingData.status !== "synced") {
-        this.addToQueue(file);
-      }
-    }
-    this.pruneLocalSyncEntries();
-    await this.plugin.saveSettings();
-  }
-  async fullSync() {
-    console.log("[SyncEngine] Starting full sync...");
-    new import_obsidian3.Notice("Starting full sync...");
-    if (this.plugin.settings.syncFolders.length === 0) {
-      new import_obsidian3.Notice("Please configure at least one sync folder first");
-      return;
-    }
-    const files = this.getFilesInSyncFolder();
-    console.log(`[SyncEngine] Found ${files.length} files to sync`);
-    this.pruneLocalSyncEntries();
-    for (const file of files) {
-      const existingData = this.plugin.settings.files[file.path];
-      if (existingData) {
-        existingData.status = "pending";
-      }
-    }
-    await this.plugin.saveSettings();
-    for (const file of files) {
-      this.syncQueue.set(file.path, file);
-    }
-    await this.processQueue();
-    new import_obsidian3.Notice(`Sync complete: ${files.length} files processed`);
-  }
-  // ==================== Utilities ====================
-  getFilesInSyncFolder() {
-    if (this.plugin.settings.syncFolders.length === 0)
-      return [];
-    const files = [];
-    const allFiles = this.plugin.app.vault.getMarkdownFiles();
-    for (const file of allFiles) {
-      if (this.plugin.isInSyncFolder(file.path)) {
-        files.push(file);
-      }
-    }
-    return files;
-  }
-  pruneLocalSyncEntries() {
-    for (const path in this.plugin.settings.files) {
-      const file = this.plugin.app.vault.getAbstractFileByPath(path);
-      if (!file || !this.plugin.isInSyncFolder(path)) {
-        console.log(`[SyncEngine] Removing untracked sync entry: ${path}`);
-        delete this.plugin.settings.files[path];
-      }
-    }
-  }
-  delay(ms) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-  }
-  getStats() {
-    const files = this.plugin.settings.files;
-    let synced = 0;
-    let pending = 0;
-    let error = 0;
-    for (const path in files) {
-      const file = this.plugin.app.vault.getAbstractFileByPath(path);
-      if (!(file instanceof import_obsidian3.TFile) || !this.plugin.isInSyncFolder(path))
-        continue;
-      const status = files[path].status;
-      if (status === "synced")
-        synced++;
-      else if (status === "pending")
-        pending++;
-      else if (status === "error")
-        error++;
-    }
-    return {
-      total: Object.keys(files).length,
-      synced,
-      pending,
-      error
-    };
   }
 };
 
 // src/chat-view.ts
-var import_obsidian4 = require("obsidian");
-var NoteSelectorModal = class extends import_obsidian4.FuzzySuggestModal {
+var import_obsidian2 = require("obsidian");
+var NoteSelectorModal = class extends import_obsidian2.FuzzySuggestModal {
   constructor(app, onSelect) {
     super(app);
     this.onSelect = onSelect;
@@ -2915,17 +310,16 @@ var NoteSelectorModal = class extends import_obsidian4.FuzzySuggestModal {
   }
 };
 var CHAT_VIEW_TYPE = "gemini-chat-view";
-var ChatView = class extends import_obsidian4.ItemView {
+var ChatView = class extends import_obsidian2.ItemView {
   constructor(leaf, plugin) {
     super(leaf);
-    this.messages = [];
     this.agentMessages = [];
     this.isLoading = false;
     this.loadingTab = null;
     this.isComposing = false;
     this.syncStatusEl = null;
     this.welcomeEl = null;
-    this.activeTab = "chat";
+    this.activeTab = "agent";
     this.citationPreviewEl = null;
     this.plugin = plugin;
   }
@@ -2943,17 +337,17 @@ var ChatView = class extends import_obsidian4.ItemView {
     container.empty();
     container.addClass("gemini-chat-container");
     const header = container.createDiv({ cls: "gemini-chat-header" });
-    header.createEl("h4", { text: "Master of Knowledge" });
+    header.createEl("h4", { text: "Master of Knowledge AGY" });
     const headerActions = header.createDiv({ cls: "gemini-chat-header-actions" });
     const clearBtn = headerActions.createEl("button", {
       cls: "gemini-chat-clear-btn",
       text: "\u{1F5D1}\uFE0F Clear"
     });
     clearBtn.addEventListener("click", () => this.clearChat());
-    const stats = this.plugin.syncEngine.getStats();
+    const contextCount = this.plugin.getKnowledgeMarkdownFiles().length;
     this.syncStatusEl = headerActions.createEl("span", {
       cls: "gemini-chat-sync-status",
-      text: `\u{1F4DA} ${stats.synced} notes synced`
+      text: `\u{1F4DA} ${contextCount} context notes`
     });
     this.tabBarEl = container.createDiv({ cls: "mok-tabs" });
     this.dashboardContentEl = container.createDiv({ cls: "mok-content" });
@@ -2965,21 +359,21 @@ var ChatView = class extends import_obsidian4.ItemView {
   }
   // Public method to update sync status - can be called from outside
   updateSyncStatus() {
-    const stats = this.plugin.syncEngine.getStats();
+    const contextCount = this.plugin.getKnowledgeMarkdownFiles().length;
     if (this.syncStatusEl) {
-      this.syncStatusEl.textContent = `\u{1F4DA} ${stats.synced} notes synced`;
+      this.syncStatusEl.textContent = `\u{1F4DA} ${contextCount} context notes`;
     }
     if (this.welcomeEl) {
       const existingWarning = this.welcomeEl.querySelector(".gemini-chat-welcome-warning");
       if (existingWarning) {
         existingWarning.remove();
       }
-      if (stats.synced === 0) {
+      if (contextCount === 0) {
         const paragraphs = this.welcomeEl.querySelectorAll("p");
         if (paragraphs.length > 0) {
           const warningEl = this.welcomeEl.createEl("p", {
             cls: "gemini-chat-welcome-warning",
-            text: "\u26A0\uFE0F No notes synced yet. Configure sync in settings to get started."
+            text: "\u26A0\uFE0F No context notes selected yet. Choose context folders in settings to load note excerpts into Agent runs."
           });
           paragraphs[0].after(warningEl);
         }
@@ -2989,9 +383,7 @@ var ChatView = class extends import_obsidian4.ItemView {
   renderTabs() {
     this.tabBarEl.empty();
     const tabs = [
-      { id: "chat", label: "Chat" },
       { id: "agent", label: "Agent" },
-      { id: "budget", label: "Budget" },
       { id: "workspace", label: "_omg" },
       { id: "graph", label: "Graph" },
       { id: "settings", label: "Settings" }
@@ -3011,10 +403,6 @@ var ChatView = class extends import_obsidian4.ItemView {
   renderActiveTab() {
     this.dashboardContentEl.empty();
     this.welcomeEl = null;
-    if (this.activeTab === "budget") {
-      this.renderBudgetTab();
-      return;
-    }
     if (this.activeTab === "workspace") {
       this.renderWorkspaceTab();
       return;
@@ -3029,12 +417,11 @@ var ChatView = class extends import_obsidian4.ItemView {
     }
     this.renderConversationToolbar();
     this.messagesContainer = this.dashboardContentEl.createDiv({ cls: "gemini-chat-messages" });
-    const list = this.activeTab === "agent" ? this.agentMessages : this.messages;
+    const list = this.agentMessages;
     if (list.length === 0) {
       this.showWelcomeMessage();
     } else {
-      for (const msg of list)
-        this.renderMessage(msg);
+      for (const msg of list) this.renderMessage(msg);
     }
     this.inputContainer = this.dashboardContentEl.createDiv({ cls: "gemini-chat-input-container" });
     if (this.activeTab === "agent") {
@@ -3053,8 +440,7 @@ var ChatView = class extends import_obsidian4.ItemView {
       }, 0);
     });
     this.inputEl.addEventListener("keydown", (e) => {
-      if (this.isComposing || e.isComposing)
-        return;
+      if (this.isComposing || e.isComposing) return;
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
         this.sendMessage();
@@ -3090,37 +476,22 @@ var ChatView = class extends import_obsidian4.ItemView {
     const toolbar = this.dashboardContentEl.createDiv({ cls: "mok-conversation-toolbar" });
     const title = toolbar.createDiv({ cls: "mok-conversation-title" });
     title.createEl("span", {
-      text: this.activeTab === "agent" ? "Agent conversation" : "Chat conversation"
+      text: "Agent conversation"
     });
     title.createEl("small", {
-      text: this.activeTab === "agent" ? "Start a fresh Agent run without clearing Chat." : "Start a fresh note chat without clearing Agent results."
+      text: "Start a fresh Agent run without clearing saved results."
     });
     const newButton = toolbar.createEl("button", {
       cls: "mok-new-conversation-btn",
-      text: this.activeTab === "agent" ? "+ New agent chat" : "+ New chat"
+      text: "+ New agent chat"
     });
     const isRunningHere = this.isLoading && this.loadingTab === this.activeTab;
     newButton.disabled = isRunningHere;
-    newButton.setAttr("aria-label", this.activeTab === "agent" ? "Start new Agent chat" : "Start new Chat");
+    newButton.setAttr("aria-label", "Start new Agent chat");
     if (isRunningHere) {
       newButton.setAttr("title", "Stop the current run before starting a new conversation.");
     }
     newButton.addEventListener("click", () => this.startNewConversation());
-  }
-  renderBudgetTab() {
-    const panel = this.dashboardContentEl.createDiv({ cls: "mok-panel" });
-    panel.createEl("h3", { text: "Budget Guard" });
-    const budget = this.plugin.settings.monthlyBudgetUsd;
-    const used = this.plugin.settings.estimatedMonthlySpendUsd;
-    const month = this.plugin.settings.estimatedMonthlySpendMonth || this.plugin.getCurrentBudgetMonth();
-    const pctValue = budget > 0 ? Math.min(100, used / budget * 100) : 0;
-    const pctLabel = pctValue > 0 && pctValue < 1 ? pctValue.toFixed(2) : String(Math.round(pctValue));
-    panel.createEl("p", { text: `Estimated ${month} usage: $${used.toFixed(4)} / $${budget.toFixed(2)} (${pctLabel}%)` });
-    const meter = panel.createDiv({ cls: "mok-budget-meter" });
-    meter.createDiv({ cls: "mok-budget-fill" }).style.width = `${pctValue}%`;
-    panel.createEl("p", { text: `Gemini API log: ${this.plugin.settings.workspaceFolder}/logs/budget-${month}.jsonl` });
-    panel.createEl("p", { text: "Cost is an estimate from Gemini token metadata when available. Agent/Antigravity CLI runs are not counted because they do not use this plugin API key." });
-    panel.createEl("p", { text: "Default policy: Flash-Lite for classification, Flash for answers, Pro only after manual approval." });
   }
   renderWorkspaceTab() {
     const panel = this.dashboardContentEl.createDiv({ cls: "mok-panel" });
@@ -3140,9 +511,8 @@ var ChatView = class extends import_obsidian4.ItemView {
     }
     const createBtn = panel.createEl("button", { cls: "gemini-chat-action-btn", text: "Create workspace folders" });
     createBtn.addEventListener("click", async () => {
-      for (const folder of folders)
-        await this.plugin.ensureVaultFolder(folder);
-      new import_obsidian4.Notice("Master of Knowledge workspace folders are ready.");
+      for (const folder of folders) await this.plugin.ensureVaultFolder(folder);
+      new import_obsidian2.Notice("Master of Knowledge AGY workspace folders are ready.");
       this.renderActiveTab();
     });
     const graphBtn = panel.createEl("button", {
@@ -3154,10 +524,11 @@ var ChatView = class extends import_obsidian4.ItemView {
       graphBtn.setAttr("disabled", "true");
       try {
         const { jsonPath, canvasPath, reportPath, nodeCount, edgeCount, communityCount } = await this.buildKnowledgeGraphArtifacts();
-        new import_obsidian4.Notice(`Knowledge graph built: ${nodeCount} nodes, ${edgeCount} links, ${communityCount} communities`);
+        new import_obsidian2.Notice(`Knowledge graph built: ${nodeCount} nodes, ${edgeCount} links, ${communityCount} communities`);
         await this.app.workspace.openLinkText(canvasPath || jsonPath, "", true);
+        void reportPath;
       } catch (error) {
-        new import_obsidian4.Notice("Failed to build knowledge graph.");
+        new import_obsidian2.Notice("Failed to build knowledge graph.");
         console.error("Graph build error:", error);
       } finally {
         graphBtn.removeAttribute("disabled");
@@ -3192,8 +563,7 @@ var ChatView = class extends import_obsidian4.ItemView {
       }).filter((value) => !!value);
       for (const link of wikilinks) {
         const target = this.app.metadataCache.getFirstLinkpathDest(link, file.path);
-        if (!target || !nodeIds.has(target.path))
-          continue;
+        if (!target || !nodeIds.has(target.path)) continue;
         const id = `${file.path}->${target.path}`;
         edgeMap.set(id, { id, from: file.path, to: target.path, type: "wikilink", confidence: "EXTRACTED", confidenceScore: 1 });
       }
@@ -3227,10 +597,10 @@ var ChatView = class extends import_obsidian4.ItemView {
     }
     const graph = {
       schemaVersion: 1,
-      generatedAt: new Date().toISOString(),
+      generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
       vault: this.plugin.getVaultPath(),
       syncFolders: this.plugin.settings.syncFolders,
-      description: "Graphify-lite vault graph built from synced Obsidian wikilinks and tags. Edges are deterministic EXTRACTED links, not LLM-inferred semantic relations.",
+      description: "Graphify-lite vault graph built from local context Obsidian wikilinks and tags. Edges are deterministic EXTRACTED links, not LLM-inferred semantic relations.",
       metrics: {
         nodes: allNodes.length,
         noteNodes: nodes.length,
@@ -3323,8 +693,7 @@ var ChatView = class extends import_obsidian4.ItemView {
     }
     const selectedIds = new Set(selected.map((node) => node.id));
     const tagNodes = nodes.filter((node) => node.kind === "tag" && (node.degree || 0) > 1).sort((a, b) => (b.degree || 0) - (a.degree || 0)).slice(0, 14);
-    for (const node of tagNodes)
-      selectedIds.add(node.id);
+    for (const node of tagNodes) selectedIds.add(node.id);
     if (tagNodes.length > 0) {
       const maxHeight = Math.max(...columnHeights);
       const tagX = columns * (groupWidth + groupGapX);
@@ -3351,11 +720,11 @@ var ChatView = class extends import_obsidian4.ItemView {
 ${node.degree || 0} linked notes`
         });
       });
+      void maxHeight;
     }
     if (canvasNodes.length === 0) {
       const fallback = noteCandidates.slice(0, 40);
-      for (const node of fallback)
-        selectedIds.add(node.id);
+      for (const node of fallback) selectedIds.add(node.id);
       fallback.forEach((node, index) => {
         const col = index % 4;
         const row = Math.floor(index / 4);
@@ -3395,7 +764,7 @@ ${node.degree || 0} linked notes`
       text: [
         "Master of Knowledge Graph",
         "Community groups are ranked by PageRank and degree. Large cards are local hubs. Tag Bridges show cross-cutting tags.",
-        "This canvas intentionally shows the most meaningful nodes, not every synced note."
+        "This canvas intentionally shows the most meaningful nodes, not every context note."
       ].join("\n")
     });
     return { nodes: canvasNodes, edges: canvasEdges };
@@ -3429,8 +798,7 @@ ${node.degree || 0} linked notes`
     var _a;
     const adjacency = this.buildGraphAdjacency(nodes, edges);
     const degree = /* @__PURE__ */ new Map();
-    for (const node of nodes)
-      degree.set(node.id, ((_a = adjacency.get(node.id)) == null ? void 0 : _a.size) || 0);
+    for (const node of nodes) degree.set(node.id, ((_a = adjacency.get(node.id)) == null ? void 0 : _a.size) || 0);
     const pageRank = this.computePageRank(nodes, adjacency);
     const communities = this.computeLabelPropagation(nodes, adjacency);
     const communityCount = new Set(communities.values()).size;
@@ -3438,11 +806,9 @@ ${node.degree || 0} linked notes`
   }
   buildGraphAdjacency(nodes, edges) {
     const adjacency = /* @__PURE__ */ new Map();
-    for (const node of nodes)
-      adjacency.set(node.id, /* @__PURE__ */ new Set());
+    for (const node of nodes) adjacency.set(node.id, /* @__PURE__ */ new Set());
     for (const edge of edges) {
-      if (!adjacency.has(edge.from) || !adjacency.has(edge.to) || edge.from === edge.to)
-        continue;
+      if (!adjacency.has(edge.from) || !adjacency.has(edge.to) || edge.from === edge.to) continue;
       adjacency.get(edge.from).add(edge.to);
       adjacency.get(edge.to).add(edge.from);
     }
@@ -3451,22 +817,17 @@ ${node.degree || 0} linked notes`
   computePageRank(nodes, adjacency) {
     const count = nodes.length;
     const scores = /* @__PURE__ */ new Map();
-    if (count === 0)
-      return scores;
-    for (const node of nodes)
-      scores.set(node.id, 1 / count);
+    if (count === 0) return scores;
+    for (const node of nodes) scores.set(node.id, 1 / count);
     let current = scores;
     for (let i = 0; i < 30; i++) {
       const next = /* @__PURE__ */ new Map();
-      for (const node of nodes)
-        next.set(node.id, 0.15 / count);
+      for (const node of nodes) next.set(node.id, 0.15 / count);
       for (const node of nodes) {
         const neighbors = adjacency.get(node.id) || /* @__PURE__ */ new Set();
-        if (neighbors.size === 0)
-          continue;
+        if (neighbors.size === 0) continue;
         const share = (current.get(node.id) || 0) * 0.85 / neighbors.size;
-        for (const neighbor of neighbors)
-          next.set(neighbor, (next.get(neighbor) || 0) + share);
+        for (const neighbor of neighbors) next.set(neighbor, (next.get(neighbor) || 0) + share);
       }
       current = next;
     }
@@ -3474,8 +835,7 @@ ${node.degree || 0} linked notes`
     const min = Math.min(...values);
     const max = Math.max(...values);
     const range = Math.max(max - min, 1e-9);
-    for (const [id, value] of current.entries())
-      current.set(id, (value - min) / range);
+    for (const [id, value] of current.entries()) current.set(id, (value - min) / range);
     return current;
   }
   computeLabelPropagation(nodes, adjacency) {
@@ -3486,13 +846,11 @@ ${node.degree || 0} linked notes`
       let changed = false;
       for (const id of order) {
         const neighbors = adjacency.get(id);
-        if (!neighbors || neighbors.size === 0)
-          continue;
+        if (!neighbors || neighbors.size === 0) continue;
         const counts = /* @__PURE__ */ new Map();
         for (const neighbor of neighbors) {
           const label = labels.get(neighbor);
-          if (label === void 0)
-            continue;
+          if (label === void 0) continue;
           counts.set(label, (counts.get(label) || 0) + 1);
         }
         let bestLabel = labels.get(id) || 0;
@@ -3508,16 +866,13 @@ ${node.degree || 0} linked notes`
           changed = true;
         }
       }
-      if (!changed)
-        break;
+      if (!changed) break;
     }
     const sizes = /* @__PURE__ */ new Map();
-    for (const label of labels.values())
-      sizes.set(label, (sizes.get(label) || 0) + 1);
+    for (const label of labels.values()) sizes.set(label, (sizes.get(label) || 0) + 1);
     const remap = /* @__PURE__ */ new Map();
     Array.from(sizes.entries()).sort((a, b) => b[1] - a[1]).forEach(([label], index) => remap.set(label, index));
-    for (const [id, label] of labels.entries())
-      labels.set(id, remap.get(label) || 0);
+    for (const [id, label] of labels.entries()) labels.set(id, remap.get(label) || 0);
     return labels;
   }
   buildGraphReport(nodes, edges, communityCount) {
@@ -3542,7 +897,7 @@ ${node.degree || 0} linked notes`
     return [
       "# Master of Knowledge Graph Report",
       "",
-      `Generated: ${new Date().toISOString()}`,
+      `Generated: ${(/* @__PURE__ */ new Date()).toISOString()}`,
       "",
       "## Scope",
       "",
@@ -3553,14 +908,14 @@ ${node.degree || 0} linked notes`
       "",
       "## Method",
       "",
-      "- Source corpus: only notes selected by Sync Folders.",
+      "- Source corpus: only notes selected by Agent Context Folders.",
       "- Edges: Obsidian wikilinks and tags only.",
       "- Confidence: all edges are marked EXTRACTED because they come from explicit note syntax.",
       "- Analytics: lightweight PageRank and Label Propagation community detection inspired by Alda graphify.",
       "",
       "## Hub Nodes",
       "",
-      hubLines.length ? hubLines.join("\n") : "- No connected hubs yet. Add wikilinks or tags between synced notes.",
+      hubLines.length ? hubLines.join("\n") : "- No connected hubs yet. Add wikilinks or tags between context notes.",
       "",
       "## Communities",
       "",
@@ -3583,7 +938,7 @@ ${node.degree || 0} linked notes`
     const panel = this.dashboardContentEl.createDiv({ cls: "mok-panel mok-graph-panel" });
     const header = panel.createDiv({ cls: "mok-graph-header" });
     header.createEl("h3", { text: "Knowledge Graph" });
-    header.createEl("p", { text: "Alda-style overview of synced notes: PageRank size, community color, 1-hop hover, and click-to-inspect." });
+    header.createEl("p", { text: "Alda-style overview of local context notes: PageRank size, community color, 1-hop hover, and click-to-inspect." });
     const controls = panel.createDiv({ cls: "mok-graph-controls" });
     const maxLabel = controls.createEl("label", { cls: "mok-graph-control-label" });
     maxLabel.createSpan({ text: "Top nodes" });
@@ -3637,7 +992,7 @@ ${node.degree || 0} linked notes`
     const detailPanel = graphWrap.createDiv({ cls: "mok-graph-detail mok-graph-detail-hidden" });
     let graph = await this.loadKnowledgeGraph();
     if (!graph) {
-      statsEl.setText("No graph yet. Build one from your synced notes.");
+      statsEl.setText("No graph yet. Build one from your context notes.");
       const empty = graphWrap.createDiv({ cls: "mok-graph-empty" });
       empty.createEl("div", { text: "No graph artifact found." });
       empty.createEl("button", {
@@ -3651,8 +1006,7 @@ ${node.degree || 0} linked notes`
     }
     let currentGraph = graph;
     const redraw = () => {
-      if (!currentGraph)
-        return;
+      if (!currentGraph) return;
       maxValue.setText(maxInput.value);
       this.renderInteractiveGraph(graphWrap, statsEl, currentGraph, {
         maxNodes: Number(maxInput.value),
@@ -3682,11 +1036,10 @@ ${node.degree || 0} linked notes`
       try {
         await this.buildKnowledgeGraphArtifacts();
         currentGraph = await this.loadKnowledgeGraph();
-        if (currentGraph)
-          redraw();
-        new import_obsidian4.Notice("Knowledge graph rebuilt.");
+        if (currentGraph) redraw();
+        new import_obsidian2.Notice("Knowledge graph rebuilt.");
       } catch (error) {
-        new import_obsidian4.Notice("Failed to rebuild graph.");
+        new import_obsidian2.Notice("Failed to rebuild graph.");
         console.error("Graph rebuild error:", error);
       } finally {
         rebuildBtn.removeAttribute("disabled");
@@ -3698,13 +1051,11 @@ ${node.degree || 0} linked notes`
   async loadKnowledgeGraph() {
     const path = `${this.plugin.settings.workspaceFolder}/graph/knowledge-graph.json`;
     const file = this.app.vault.getAbstractFileByPath(path);
-    if (!(file instanceof import_obsidian4.TFile))
-      return null;
+    if (!(file instanceof import_obsidian2.TFile)) return null;
     try {
       const raw = await this.app.vault.read(file);
       const graph = JSON.parse(raw);
-      if (!Array.isArray(graph.nodes) || !Array.isArray(graph.edges))
-        return null;
+      if (!Array.isArray(graph.nodes) || !Array.isArray(graph.edges)) return null;
       return graph;
     } catch (error) {
       console.error("Failed to read knowledge graph:", error);
@@ -3722,11 +1073,9 @@ ${node.degree || 0} linked notes`
     const allNodes = graph.nodes || [];
     const allEdges = graph.edges || [];
     const degree = /* @__PURE__ */ new Map();
-    for (const node of allNodes)
-      degree.set(node.id, node.degree || 0);
+    for (const node of allNodes) degree.set(node.id, node.degree || 0);
     let candidates = allNodes.filter((node) => options.includeTags || node.kind !== "tag");
-    if (options.hideIsolated)
-      candidates = candidates.filter((node) => (degree.get(node.id) || 0) > 0);
+    if (options.hideIsolated) candidates = candidates.filter((node) => (degree.get(node.id) || 0) > 0);
     const selected = candidates.sort((a, b) => (b.pageRank || 0) - (a.pageRank || 0) || (degree.get(b.id) || 0) - (degree.get(a.id) || 0)).slice(0, options.maxNodes);
     const selectedIds = new Set(selected.map((node) => node.id));
     const selectedById = new Map(selected.map((node) => [node.id, node]));
@@ -3736,8 +1085,7 @@ ${node.degree || 0} linked notes`
     const edges = this.capGraphEdges(rawEdges, selected, options.includeTags ? 520 : 340, options.includeTags ? 10 : 8);
     const layout = this.computeForceLayout(selected, edges, container.clientWidth || 1100, 620);
     const neighbors = /* @__PURE__ */ new Map();
-    for (const node of selected)
-      neighbors.set(node.id, /* @__PURE__ */ new Set());
+    for (const node of selected) neighbors.set(node.id, /* @__PURE__ */ new Set());
     for (const edge of edges) {
       (_a = neighbors.get(edge.from)) == null ? void 0 : _a.add(edge.to);
       (_b = neighbors.get(edge.to)) == null ? void 0 : _b.add(edge.from);
@@ -3767,8 +1115,7 @@ ${node.degree || 0} linked notes`
     for (const edge of edges) {
       const from = layout.positions.get(edge.from);
       const to = layout.positions.get(edge.to);
-      if (!from || !to)
-        continue;
+      if (!from || !to) continue;
       const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
       line.setAttribute("x1", String(from.x));
       line.setAttribute("y1", String(from.y));
@@ -3780,8 +1127,7 @@ ${node.degree || 0} linked notes`
     }
     for (const node of selected) {
       const pos = layout.positions.get(node.id);
-      if (!pos)
-        continue;
+      if (!pos) continue;
       const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
       const title = node.title || node.path;
       const isSearchHit = search && title.toLowerCase().includes(search);
@@ -3817,8 +1163,7 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
         }
       });
       group.addEventListener("mouseleave", () => {
-        for (const el of nodeElements.values())
-          el.removeClass("mok-graph-faded");
+        for (const el of nodeElements.values()) el.removeClass("mok-graph-faded");
         for (const edgeEl of edgeElements) {
           edgeEl.element.removeClass("mok-graph-edge-highlight");
           edgeEl.element.removeClass("mok-graph-faded");
@@ -3831,8 +1176,7 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
       nodeElements.set(node.id, group);
     }
     svg.addEventListener("click", (event) => {
-      if (event.target === svg)
-        detailPanel.addClass("mok-graph-detail-hidden");
+      if (event.target === svg) detailPanel.addClass("mok-graph-detail-hidden");
     });
   }
   attachGraphNavigation(svg, viewport, detailPanel, width, height) {
@@ -3873,8 +1217,7 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
     }, { passive: false });
     svg.addEventListener("pointerdown", (event) => {
       const target = event.target;
-      if (target.closest(".mok-graph-node") || target.closest(".mok-graph-detail"))
-        return;
+      if (target.closest(".mok-graph-node") || target.closest(".mok-graph-detail")) return;
       isPanning = true;
       last = point(event);
       detailPanel.addClass("mok-graph-detail-hidden");
@@ -3882,8 +1225,7 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
       svg.setPointerCapture(event.pointerId);
     });
     svg.addEventListener("pointermove", (event) => {
-      if (!isPanning || !last)
-        return;
+      if (!isPanning || !last) return;
       const p = point(event);
       const state = getState();
       apply({
@@ -3894,8 +1236,7 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
       last = p;
     });
     const stopPan = (event) => {
-      if (!isPanning)
-        return;
+      if (!isPanning) return;
       isPanning = false;
       last = null;
       svg.removeClass("mok-graph-panning");
@@ -3910,8 +1251,7 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
   zoomGraph(container, factor) {
     const svg = container.querySelector(".mok-graph-svg");
     const viewport = container.querySelector(".mok-graph-viewport");
-    if (!svg || !viewport)
-      return;
+    if (!svg || !viewport) return;
     const viewBox = svg.viewBox.baseVal;
     const current = {
       scale: Number(svg.dataset.graphScale || "1"),
@@ -3935,8 +1275,7 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
   resetGraphZoom(container) {
     const svg = container.querySelector(".mok-graph-svg");
     const viewport = container.querySelector(".mok-graph-viewport");
-    if (!svg || !viewport)
-      return;
+    if (!svg || !viewport) return;
     svg.dataset.graphScale = "1";
     svg.dataset.graphX = "0";
     svg.dataset.graphY = "0";
@@ -3950,7 +1289,7 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
     close.addEventListener("click", () => panel.addClass("mok-graph-detail-hidden"));
     panel.createEl("div", {
       cls: "mok-graph-detail-kind",
-      text: node.kind === "tag" ? "tag bridge" : "synced note"
+      text: node.kind === "tag" ? "tag bridge" : "context note"
     });
     panel.createEl("h4", { text: node.title || node.path });
     panel.createEl("p", {
@@ -3958,10 +1297,9 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
     });
     if (node.kind === "note") {
       const file = this.app.vault.getAbstractFileByPath(node.path);
-      if (file instanceof import_obsidian4.TFile) {
+      if (file instanceof import_obsidian2.TFile) {
         const preview = (await this.app.vault.cachedRead(file)).replace(/---[\s\S]*?---/, "").replace(/\s+/g, " ").trim().slice(0, 360);
-        if (preview)
-          panel.createEl("p", { cls: "mok-graph-detail-preview", text: preview });
+        if (preview) panel.createEl("p", { cls: "mok-graph-detail-preview", text: preview });
         const actions = panel.createDiv({ cls: "mok-graph-detail-actions" });
         const openBtn = actions.createEl("button", { cls: "gemini-chat-action-btn", text: "Open note" });
         openBtn.addEventListener("click", async () => {
@@ -3979,11 +1317,9 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
           text: neighbor.title || neighbor.path
         });
         item.addEventListener("click", async () => {
-          if (neighbor.kind !== "note")
-            return;
+          if (neighbor.kind !== "note") return;
           const file = this.app.vault.getAbstractFileByPath(neighbor.path);
-          if (file instanceof import_obsidian4.TFile)
-            await this.app.workspace.getLeaf(true).openFile(file);
+          if (file instanceof import_obsidian2.TFile) await this.app.workspace.getLeaf(true).openFile(file);
         });
       }
     }
@@ -4005,27 +1341,21 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
     });
     const selected = [];
     for (const edge of sorted) {
-      if (selected.length >= maxEdges)
-        break;
+      if (selected.length >= maxEdges) break;
       const fromCount = countByNode.get(edge.from) || 0;
       const toCount = countByNode.get(edge.to) || 0;
-      if (fromCount >= maxPerNode || toCount >= maxPerNode)
-        continue;
+      if (fromCount >= maxPerNode || toCount >= maxPerNode) continue;
       selected.push(edge);
       countByNode.set(edge.from, fromCount + 1);
       countByNode.set(edge.to, toCount + 1);
     }
-    if (selected.length >= Math.min(maxEdges, edges.length) || maxPerNode >= 20)
-      return selected;
+    if (selected.length >= Math.min(maxEdges, edges.length) || maxPerNode >= 20) return selected;
     for (const edge of sorted) {
-      if (selected.length >= maxEdges)
-        break;
-      if (selected.includes(edge))
-        continue;
+      if (selected.length >= maxEdges) break;
+      if (selected.includes(edge)) continue;
       const fromCount = countByNode.get(edge.from) || 0;
       const toCount = countByNode.get(edge.to) || 0;
-      if (fromCount >= maxPerNode + 3 || toCount >= maxPerNode + 3)
-        continue;
+      if (fromCount >= maxPerNode + 3 || toCount >= maxPerNode + 3) continue;
       selected.push(edge);
       countByNode.set(edge.from, fromCount + 1);
       countByNode.set(edge.to, toCount + 1);
@@ -4039,8 +1369,7 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
     const communities = Array.from(new Set(nodes.map((node) => node.community || 0))).sort((a, b) => a - b);
     const centerByCommunity = /* @__PURE__ */ new Map();
     const communityCounts = /* @__PURE__ */ new Map();
-    for (const node of nodes)
-      communityCounts.set(node.community || 0, (communityCounts.get(node.community || 0) || 0) + 1);
+    for (const node of nodes) communityCounts.set(node.community || 0, (communityCounts.get(node.community || 0) || 0) + 1);
     const topCommunities = new Set(
       Array.from(communityCounts.entries()).sort((a, b) => b[1] - a[1]).slice(0, 12).map(([community]) => community)
     );
@@ -4053,6 +1382,7 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
         x: safeWidth / 2 + Math.cos(angle) * radial,
         y: safeHeight / 2 + Math.sin(angle) * radial * 0.68
       });
+      void index;
     });
     nodes.forEach((node, index) => {
       const community = node.community || 0;
@@ -4075,12 +1405,10 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
       const alpha = 1 - iter / 180;
       for (let i = 0; i < nodes.length; i++) {
         const a = positions.get(nodes[i].id);
-        if (!a)
-          continue;
+        if (!a) continue;
         for (let j = i + 1; j < nodes.length; j++) {
           const b = positions.get(nodes[j].id);
-          if (!b)
-            continue;
+          if (!b) continue;
           const dx = a.x - b.x;
           const dy = a.y - b.y;
           const distSq = Math.max(dx * dx + dy * dy, 220);
@@ -4096,8 +1424,7 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
       for (const edge of visibleEdges) {
         const a = positions.get(edge.from);
         const b = positions.get(edge.to);
-        if (!a || !b)
-          continue;
+        if (!a || !b) continue;
         const dx = b.x - a.x;
         const dy = b.y - a.y;
         const dist = Math.max(Math.sqrt(dx * dx + dy * dy), 1);
@@ -4160,7 +1487,7 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
   }
   async writeVaultFile(path, content) {
     const existing = this.app.vault.getAbstractFileByPath(path);
-    if (existing instanceof import_obsidian4.TFile) {
+    if (existing instanceof import_obsidian2.TFile) {
       await this.app.vault.modify(existing, content);
     } else {
       await this.app.vault.create(path, content);
@@ -4169,7 +1496,7 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
   renderSettingsTab() {
     const panel = this.dashboardContentEl.createDiv({ cls: "mok-panel" });
     panel.createEl("h3", { text: "Settings" });
-    panel.createEl("p", { text: "Open plugin settings to change sync folders, Gemini model, Agent CLI path, budget, and Agent output folder." });
+    panel.createEl("p", { text: "Open plugin settings to change context folders, Agent CLI path, Agent output folder, and local workspace options." });
     const openBtn = panel.createEl("button", {
       cls: "gemini-chat-action-btn",
       text: "Open Master of Knowledge settings"
@@ -4178,35 +1505,17 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
   }
   showWelcomeMessage() {
     this.welcomeEl = this.messagesContainer.createDiv({ cls: "gemini-chat-welcome" });
-    this.welcomeEl.createEl("div", { cls: "gemini-chat-welcome-icon", text: this.activeTab === "agent" ? "\u{1F9ED}" : "\u{1F9E0}" });
-    this.welcomeEl.createEl("h3", { text: this.activeTab === "agent" ? "Agent Workspace" : "Ask your knowledge base" });
-    this.welcomeEl.createEl("p", { text: this.activeTab === "agent" ? "Run Antigravity/AGY work from Obsidian, then apply the result to notes with the same actions as chat." : "Ask questions about your synced notes. I'll help you find information and provide insights based on your personal knowledge base." });
-    const stats = this.plugin.syncEngine.getStats();
-    if (stats.synced === 0) {
+    this.welcomeEl.createEl("div", { cls: "gemini-chat-welcome-icon", text: "\u{1F9ED}" });
+    this.welcomeEl.createEl("h3", { text: "Agent Workspace" });
+    this.welcomeEl.createEl("p", { text: "Run Antigravity/AGY work from Obsidian using your local CLI OAuth session, then apply the result to notes." });
+    const contextCount = this.plugin.getKnowledgeMarkdownFiles().length;
+    if (contextCount === 0) {
       this.welcomeEl.createEl("p", {
         cls: "gemini-chat-welcome-warning",
-        text: "\u26A0\uFE0F No notes synced yet. Configure sync in settings to get started."
+        text: "\u26A0\uFE0F No context notes selected yet. Choose context folders in settings to load note excerpts into Agent runs."
       });
     }
-    if (this.activeTab === "agent")
-      return;
-    const examplesEl = this.welcomeEl.createDiv({ cls: "gemini-chat-examples" });
-    examplesEl.createEl("p", { text: "Try asking:" });
-    const examples = [
-      "What are the main topics in my notes?",
-      "Summarize my notes about [topic]",
-      "Find connections between [topic A] and [topic B]"
-    ];
-    for (const example of examples) {
-      const exampleBtn = examplesEl.createEl("button", {
-        cls: "gemini-chat-example-btn",
-        text: example
-      });
-      exampleBtn.addEventListener("click", () => {
-        this.inputEl.value = example;
-        this.inputEl.focus();
-      });
-    }
+    return;
   }
   renderAgentModeBar(container) {
     const modeBar = container.createDiv({ cls: "mok-agent-mode-bar" });
@@ -4227,14 +1536,13 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
   }
   async sendMessage() {
     const text = this.inputEl.value.trim();
-    if (!text || this.isLoading)
-      return;
+    if (!text || this.isLoading) return;
     const requestTab = this.activeTab;
     const requestContainer = this.messagesContainer;
     const requestInput = this.inputEl;
     const requestButton = this.sendButton;
-    if (requestTab === "chat" && !this.plugin.settings.apiKey) {
-      new import_obsidian4.Notice("Please configure your Gemini API key in settings");
+    if (requestTab !== "agent") {
+      new import_obsidian2.Notice("Chat is disabled in this AGY-only fork. Use the Agent tab.");
       return;
     }
     const welcomeEl = this.messagesContainer.querySelector(".gemini-chat-welcome");
@@ -4245,7 +1553,7 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
       role: "user",
       content: text
     };
-    const list = requestTab === "agent" ? this.agentMessages : this.messages;
+    const list = this.agentMessages;
     list.push(userMessage);
     this.renderMessage(userMessage);
     requestInput.value = "";
@@ -4277,13 +1585,11 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
         isStreaming: true
       };
       list.push(streamingMessage);
-      if (this.activeTab === requestTab)
-        this.renderActiveTab();
+      if (this.activeTab === requestTab) this.renderActiveTab();
     }
     try {
-      const response = requestTab === "agent" ? await this.runAgentMessage(text, (chunk, stream) => {
-        if (!streamingMessage || stream !== "stdout")
-          return;
+      const response = await this.runAgentMessage(text, (chunk, stream) => {
+        if (!streamingMessage || stream !== "stdout") return;
         streamedContent += chunk;
         streamingMessage.content = streamedContent.trim() || "Agent is running...";
         const now = Date.now();
@@ -4291,7 +1597,7 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
           lastStreamRender = now;
           this.renderActiveTab();
         }
-      }) : await this.plugin.geminiService.chat(text);
+      });
       if (streamingMessage) {
         streamingMessage.content = response.content;
         streamingMessage.citations = response.citations;
@@ -4311,8 +1617,7 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
         list.push(errorMessage);
       }
     } finally {
-      if (loadingTimer !== null)
-        window.clearInterval(loadingTimer);
+      if (loadingTimer !== null) window.clearInterval(loadingTimer);
       loadingEl.remove();
       this.isLoading = false;
       this.loadingTab = null;
@@ -4323,13 +1628,13 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
   }
   stopAgentRun() {
     const stopped = this.plugin.agentService.stop();
-    new import_obsidian4.Notice(stopped ? "Agent run stopped." : "No active Agent run to stop.");
+    new import_obsidian2.Notice(stopped ? "Agent run stopped." : "No active Agent run to stop.");
   }
   async runAgentMessage(text, onChunk) {
     var _a;
     const result = await this.plugin.agentService.run(text, onChunk);
     const contextLine = result.contextStats ? [
-      `Knowledge context: ${result.contextStats.totalSyncedNotes} synced notes available; `,
+      `Knowledge context: ${result.contextStats.totalContextNotes} local context notes available; `,
       `${result.contextStats.loadedExcerptNotes} relevant note excerpts loaded into this Agent run`,
       result.contextStats.truncatedByBudget ? " (trimmed to fit the Agent prompt)." : "."
     ].join("") : "";
@@ -4358,7 +1663,7 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
     avatarEl.textContent = message.role === "user" ? "\u{1F464}" : "\u{1F916}";
     const contentWrapper = msgEl.createDiv({ cls: "gemini-chat-content-wrapper" });
     const contentEl = contentWrapper.createDiv({ cls: "gemini-chat-content" });
-    import_obsidian4.MarkdownRenderer.renderMarkdown(
+    import_obsidian2.MarkdownRenderer.renderMarkdown(
       message.content,
       contentEl,
       "",
@@ -4455,8 +1760,7 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
     const links = Array.from(container.querySelectorAll("a[href]"));
     for (const link of links) {
       const vaultPath = this.findVaultNotePath(link.href) || this.findVaultNotePath(link.textContent || "");
-      if (!vaultPath)
-        continue;
+      if (!vaultPath) continue;
       link.addClass("gemini-chat-inline-citation");
       link.setAttr("href", "#");
       link.addEventListener("click", async (event) => {
@@ -4485,26 +1789,21 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
     while ((match = markdownLinks.exec(text)) !== null) {
       candidates.push(match[1], match[2]);
     }
-    while ((match = bareFileUrl.exec(text)) !== null)
-      candidates.push(match[0]);
-    while ((match = savedLocation.exec(text)) !== null)
-      candidates.push(match[1]);
+    while ((match = bareFileUrl.exec(text)) !== null) candidates.push(match[0]);
+    while ((match = savedLocation.exec(text)) !== null) candidates.push(match[1]);
     candidates.push(text.trim());
     for (const candidate of candidates) {
       const vaultPath = this.findVaultNotePath(candidate);
-      if (vaultPath)
-        return vaultPath;
+      if (vaultPath) return vaultPath;
     }
     return null;
   }
   findVaultNotePath(candidate) {
     var _a;
     const cleaned = this.cleanNoteCandidate(candidate);
-    if (!cleaned)
-      return null;
+    if (!cleaned) return null;
     const directCandidates = [cleaned];
-    if (!cleaned.endsWith(".md"))
-      directCandidates.push(`${cleaned}.md`);
+    if (!cleaned.endsWith(".md")) directCandidates.push(`${cleaned}.md`);
     for (const direct of directCandidates) {
       const absolute = this.toAbsoluteVaultCandidate(direct);
       if (absolute) {
@@ -4512,13 +1811,11 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
         if (absolute.startsWith(`${vaultRoot}/`)) {
           const relativePath = decodeURIComponent(absolute.slice(vaultRoot.length + 1));
           const file2 = this.app.vault.getAbstractFileByPath(relativePath);
-          if (file2 instanceof import_obsidian4.TFile && file2.extension === "md")
-            return file2.path;
+          if (file2 instanceof import_obsidian2.TFile && file2.extension === "md") return file2.path;
         }
       }
       const file = this.app.vault.getAbstractFileByPath(direct);
-      if (file instanceof import_obsidian4.TFile && file.extension === "md")
-        return file.path;
+      if (file instanceof import_obsidian2.TFile && file.extension === "md") return file.path;
     }
     const normalizedCandidates = directCandidates.map((path) => this.normalizeCitationPath(path));
     const basenameCandidates = normalizedCandidates.map((path) => path.split("/").pop() || path);
@@ -4554,7 +1851,7 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
       cleanPath += ".md";
     }
     const file = this.resolveCitationFile(cleanPath);
-    if (file instanceof import_obsidian4.TFile) {
+    if (file instanceof import_obsidian2.TFile) {
       await this.app.workspace.openLinkText(file.path, "", true);
     } else {
       const fileName = cleanPath.split("/").pop() || cleanPath;
@@ -4565,7 +1862,7 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
       if (matchingFile) {
         await this.app.workspace.openLinkText(matchingFile.path, "", true);
       } else {
-        new import_obsidian4.Notice(`Note not found: ${path}`);
+        new import_obsidian2.Notice(`Note not found: ${path}`);
       }
     }
   }
@@ -4583,8 +1880,7 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
     if (file) {
       this.attachCitationHover(row, file);
       row.addEventListener("click", (event) => {
-        if (event.target.closest("button"))
-          return;
+        if (event.target.closest("button")) return;
         this.openNote(file.path);
       });
     }
@@ -4642,8 +1938,7 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
     const candidates = this.getCitationPathCandidates(path);
     for (const candidate of candidates) {
       const file = this.app.vault.getAbstractFileByPath(candidate);
-      if (file instanceof import_obsidian4.TFile && this.isSyncedCitationFile(file))
-        return file;
+      if (file instanceof import_obsidian2.TFile && this.isSyncedCitationFile(file)) return file;
     }
     const normalizedCandidates = new Set(candidates.map((candidate) => this.normalizeCitationPath(candidate)));
     return this.getSyncedMarkdownFiles().find((file) => {
@@ -4655,19 +1950,16 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
     }) || null;
   }
   getSyncedMarkdownFiles() {
-    return this.app.vault.getMarkdownFiles().filter((file) => this.isSyncedCitationFile(file));
+    return this.plugin.getKnowledgeMarkdownFiles().filter((file) => this.isSyncedCitationFile(file));
   }
   isSyncedCitationFile(file) {
-    const syncData = this.plugin.settings.files[file.path];
-    return file.extension === "md" && (syncData == null ? void 0 : syncData.status) === "synced" && this.plugin.isInSyncFolder(file.path);
+    return file.extension === "md" && this.plugin.isInSyncFolder(file.path);
   }
   getCitationPathCandidates(path) {
     const cleaned = path.trim().replace(/^\[\[/, "").replace(/\]\]$/, "").replace(/^["']|["']$/g, "").split("|")[0].trim();
-    if (!cleaned)
-      return [];
+    if (!cleaned) return [];
     const candidates = [cleaned];
-    if (!cleaned.endsWith(".md"))
-      candidates.push(`${cleaned}.md`);
+    if (!cleaned.endsWith(".md")) candidates.push(`${cleaned}.md`);
     return Array.from(new Set(candidates));
   }
   normalizeCitationPath(path) {
@@ -4683,19 +1975,14 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
   }
   startNewConversation() {
     if (this.isLoading && this.loadingTab === this.activeTab) {
-      new import_obsidian4.Notice("Stop the current run before starting a new conversation.");
+      new import_obsidian2.Notice("Stop the current run before starting a new conversation.");
       return;
     }
-    if (this.activeTab === "agent") {
-      this.agentMessages = [];
-      new import_obsidian4.Notice("Started a new Agent conversation.");
-    } else if (this.activeTab === "chat") {
-      this.messages = [];
-      this.plugin.geminiService.clearChatHistory();
-      new import_obsidian4.Notice("Started a new Chat conversation.");
-    } else {
+    if (this.activeTab !== "agent") {
       return;
     }
+    this.agentMessages = [];
+    new import_obsidian2.Notice("Started a new Agent conversation.");
     this.renderActiveTab();
   }
   // Render action buttons (Apply, Copy) for AI responses
@@ -4771,7 +2058,7 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
     if (!this.plugin.settings.includeMetadata) {
       return content;
     }
-    const now = new Date();
+    const now = /* @__PURE__ */ new Date();
     const dateStr = now.toLocaleDateString("ko-KR", {
       year: "numeric",
       month: "2-digit",
@@ -4779,7 +2066,7 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
       hour: "2-digit",
       minute: "2-digit"
     });
-    const label = this.activeTab === "agent" ? "Agent Result" : "Gemini Response";
+    const label = "Agent Result";
     let result = `
 
 ---
@@ -4801,7 +2088,7 @@ ${content}`;
   }
   async saveToWorkspace(message) {
     const folder = this.activeTab === "agent" ? await this.plugin.ensureVaultFolder(this.plugin.settings.agentOutputFolder) : await this.plugin.ensureWorkspaceFolder("compiled");
-    const now = new Date();
+    const now = /* @__PURE__ */ new Date();
     const dateStr = now.toISOString().slice(0, 10);
     const timeStr = now.toTimeString().slice(0, 5).replace(":", "-");
     const fileName = `${folder}/Master of Knowledge ${dateStr} ${timeStr}.md`;
@@ -4810,64 +2097,64 @@ ${content}`;
       const file = await this.app.vault.create(fileName, formattedContent);
       message.savedNotePath = file.path;
       await this.app.workspace.openLinkText(file.path, "", true);
-      new import_obsidian4.Notice(`\u2705 Saved to ${file.path}`);
+      new import_obsidian2.Notice(`\u2705 Saved to ${file.path}`);
       this.renderActiveTab();
     } catch (error) {
-      new import_obsidian4.Notice("Failed to save workspace note.");
+      new import_obsidian2.Notice("Failed to save workspace note.");
       console.error("Workspace save error:", error);
     }
   }
   // Insert at cursor position in active editor
   async insertAtCursor(content, citations) {
     var _a;
-    const activeView = this.app.workspace.getActiveViewOfType(import_obsidian4.ItemView);
+    const activeView = this.app.workspace.getActiveViewOfType(import_obsidian2.ItemView);
     const markdownView = this.app.workspace.getActiveFile();
     if (!markdownView) {
-      new import_obsidian4.Notice("No active note. Please open a note first.");
+      new import_obsidian2.Notice("No active note. Please open a note first.");
       return;
     }
     const leaf = this.app.workspace.getMostRecentLeaf();
     if (!leaf) {
-      new import_obsidian4.Notice("No active editor found.");
+      new import_obsidian2.Notice("No active editor found.");
       return;
     }
     const editor = (_a = leaf.view) == null ? void 0 : _a.editor;
     if (!editor) {
-      new import_obsidian4.Notice("No editor found. Please open a note in edit mode.");
+      new import_obsidian2.Notice("No editor found. Please open a note in edit mode.");
       return;
     }
     const formattedContent = this.formatContentWithMetadata(content, citations);
     editor.replaceSelection(formattedContent);
-    new import_obsidian4.Notice("\u2705 Content inserted at cursor!");
+    new import_obsidian2.Notice("\u2705 Content inserted at cursor!");
   }
   // Append to current note
   async appendToCurrentNote(content, citations) {
     const activeFile = this.app.workspace.getActiveFile();
     if (!activeFile) {
-      new import_obsidian4.Notice("No active note. Please open a note first.");
+      new import_obsidian2.Notice("No active note. Please open a note first.");
       return;
     }
     const formattedContent = this.formatContentWithMetadata(content, citations);
     await this.app.vault.append(activeFile, formattedContent);
-    new import_obsidian4.Notice(`\u2705 Content appended to ${activeFile.name}!`);
+    new import_obsidian2.Notice(`\u2705 Content appended to ${activeFile.name}!`);
   }
   // Create new note with content
   async createNewNote(message) {
-    const now = new Date();
+    const now = /* @__PURE__ */ new Date();
     const dateStr = now.toISOString().slice(0, 10);
     const timeStr = now.toTimeString().slice(0, 5).replace(":", "-");
     const folder = this.activeTab === "agent" ? await this.plugin.ensureVaultFolder(this.plugin.settings.agentOutputFolder) : "";
-    const baseName = this.activeTab === "agent" ? "Agent Result" : "Gemini Response";
+    const baseName = "Agent Result";
     const fileName = folder ? `${folder}/${baseName} ${dateStr} ${timeStr}.md` : `${baseName} ${dateStr} ${timeStr}.md`;
     const formattedContent = this.formatContentWithMetadata(message.content, message.citations);
     try {
       const newFile = await this.app.vault.create(fileName, formattedContent);
       message.savedNotePath = newFile.path;
       await this.app.workspace.openLinkText(newFile.path, "", true);
-      new import_obsidian4.Notice(`\u2705 Created new note: ${newFile.path}`);
+      new import_obsidian2.Notice(`\u2705 Created new note: ${newFile.path}`);
       this.renderActiveTab();
     } catch (error) {
-      new import_obsidian4.Notice("Failed to create note. Please try again.");
+      new import_obsidian2.Notice("Failed to create note. Please try again.");
       console.error("Create note error:", error);
     }
   }
@@ -4876,7 +2163,7 @@ ${content}`;
     const modal = new NoteSelectorModal(this.app, async (file) => {
       const formattedContent = this.formatContentWithMetadata(content, citations);
       await this.app.vault.append(file, formattedContent);
-      new import_obsidian4.Notice(`\u2705 Content appended to ${file.name}!`);
+      new import_obsidian2.Notice(`\u2705 Content appended to ${file.name}!`);
     });
     modal.open();
   }
@@ -4888,7 +2175,7 @@ ${content}`;
 };
 
 // src/agent-service.ts
-var import_obsidian5 = require("obsidian");
+var import_obsidian3 = require("obsidian");
 var import_child_process = require("child_process");
 var import_fs = require("fs");
 var import_os = require("os");
@@ -4901,8 +2188,7 @@ var AgentService = class {
     this.lastContextStats = null;
   }
   stop() {
-    if (!this.activeChild)
-      return false;
+    if (!this.activeChild) return false;
     this.stopWasRequested = true;
     this.activeChild.kill();
     this.activeChild = null;
@@ -4974,7 +2260,7 @@ ${stderr.trim()}` : ""].join("").trim();
         message,
         durationMs: Date.now() - started
       });
-      new import_obsidian5.Notice("Agent run failed. Check the result card for details.");
+      new import_obsidian3.Notice("Agent run failed. Check the result card for details.");
       return {
         content: `Agent run failed.
 
@@ -5011,11 +2297,11 @@ ${message}`,
     const workspaceFolder = this.plugin.settings.workspaceFolder;
     const agentOutputFolder = await this.plugin.ensureVaultFolder(this.plugin.settings.agentOutputFolder);
     const trustMode = this.plugin.settings.agentPermissionMode;
-    const scope = this.plugin.settings.syncFolders.join(", ") || "No sync folders selected";
+    const scope = this.plugin.settings.syncFolders.join(", ") || "No context folders selected";
     const webSearch = this.plugin.settings.agentWebSearchEnabled;
     const obsidianSkill = await this.getObsidianSkillContext();
-    const syncedNotes = await this.buildSyncedNotesContext(prompt);
-    this.lastContextStats = syncedNotes.stats;
+    const contextNotes = await this.buildLocalNotesContext(prompt);
+    this.lastContextStats = contextNotes.stats;
     let activeNoteContent = "";
     if (activeFile) {
       try {
@@ -5040,14 +2326,14 @@ ${message}`,
       activeFile ? `Active note path: ${activeFile.path}.` : "No active note is open.",
       activeNoteContent ? `Active note content excerpt:
 ${activeNoteContent}` : "",
-      `Total synced notes available in selected folders: ${syncedNotes.stats.totalSyncedNotes}.`,
-      `Direct excerpts loaded into this prompt: ${syncedNotes.stats.loadedExcerptNotes}.`,
+      `Total local context notes available in selected folders: ${contextNotes.stats.totalContextNotes}.`,
+      `Direct excerpts loaded into this prompt: ${contextNotes.stats.loadedExcerptNotes}.`,
       "The excerpts below are a relevance-ranked working set, not the complete knowledge base. Do not describe the total knowledge base as only the excerpt count.",
       "Use the loaded excerpts first, and use the vault workspace path plus selected knowledge folders when you need to inspect more notes.",
-      "Synced note excerpts loaded for this request. Cite note paths when you use them:",
-      syncedNotes.context,
+      "Local note excerpts loaded for this request. Cite note paths when you use them:",
+      contextNotes.context,
       webSearch ? "Use web search when current external information would improve the answer, and return markdown with clear web and vault sources." : "Do not use web search unless the user explicitly asks for it in the prompt. Prefer vault evidence.",
-      "Answer primarily from the synced notes context. If the answer is not supported by synced notes, say so clearly.",
+      "Answer primarily from the local note context. If the answer is not supported by local notes, say so clearly.",
       "Do not modify user notes directly unless the prompt explicitly asks for it. Prefer a preview-ready result.",
       "",
       "User request:",
@@ -5055,14 +2341,13 @@ ${activeNoteContent}` : "",
     ].join("\n");
   }
   async getObsidianSkillContext() {
-    if (!this.plugin.settings.agentUseObsidianSkill)
-      return "";
+    if (!this.plugin.settings.agentUseObsidianSkill) return "";
     const path = this.plugin.normalizeFolder(
       this.plugin.settings.agentObsidianSkillPath || "_omg/skills/obsidian-writing-skill.md",
       "_omg/skills/obsidian-writing-skill.md"
     );
     const file = this.plugin.app.vault.getAbstractFileByPath(path);
-    if (!(file instanceof import_obsidian5.TFile)) {
+    if (!(file instanceof import_obsidian3.TFile)) {
       return [
         "Obsidian writing skill is enabled, but the skill file is not installed yet.",
         "Default behavior: write valid Obsidian Markdown, save generated notes inside the Agent output folder, return vault-relative note links, and do not claim a save unless the file exists."
@@ -5080,11 +2365,11 @@ ${activeNoteContent}` : "",
       return "";
     }
   }
-  async buildSyncedNotesContext(prompt) {
+  async buildLocalNotesContext(prompt) {
     const contexts = [];
     let totalLength = 0;
     const maxTotalLength = 24e3;
-    const candidates = await this.getRankedSyncedFiles(prompt);
+    const candidates = await this.getRankedContextFiles(prompt);
     let truncatedByBudget = false;
     for (const file of candidates) {
       try {
@@ -5100,11 +2385,11 @@ ${truncated}
         contexts.push(block);
         totalLength += block.length;
       } catch (error) {
-        console.warn(`Failed to read synced note for Agent context: ${file.path}`, error);
+        console.warn(`Failed to read local note for Agent context: ${file.path}`, error);
       }
     }
     const stats = {
-      totalSyncedNotes: candidates.length,
+      totalContextNotes: candidates.length,
       loadedExcerptNotes: contexts.length,
       contextChars: totalLength,
       truncatedByBudget,
@@ -5114,15 +2399,14 @@ ${truncated}
       }).filter((path) => !!path)
     };
     return {
-      context: contexts.join("\n") || "No synced notes are available in the selected sync folders.",
+      context: contexts.join("\n") || "No local context notes are available in the selected context folders.",
       stats
     };
   }
-  async getRankedSyncedFiles(prompt) {
-    const files = this.getSyncedMarkdownFiles();
+  async getRankedContextFiles(prompt) {
+    const files = this.plugin.getKnowledgeMarkdownFiles();
     const tokens = this.tokenize(prompt);
-    if (tokens.length === 0)
-      return files;
+    if (tokens.length === 0) return files;
     const scored = [];
     for (const file of files) {
       try {
@@ -5132,10 +2416,8 @@ ${file.path}
 ${content.slice(0, 4e3)}`.toLowerCase();
         let score = 0;
         for (const token of tokens) {
-          if (file.basename.toLowerCase().includes(token))
-            score += 10;
-          if (file.path.toLowerCase().includes(token))
-            score += 6;
+          if (file.basename.toLowerCase().includes(token)) score += 10;
+          if (file.path.toLowerCase().includes(token)) score += 6;
           score += Math.min(haystack.split(token).length - 1, 8);
         }
         scored.push({ file, score });
@@ -5144,21 +2426,6 @@ ${content.slice(0, 4e3)}`.toLowerCase();
       }
     }
     return scored.sort((a, b) => b.score - a.score || a.file.path.localeCompare(b.file.path)).map((item) => item.file);
-  }
-  getSyncedMarkdownFiles() {
-    const files = [];
-    for (const path in this.plugin.settings.files) {
-      const syncData = this.plugin.settings.files[path];
-      if (syncData.status !== "synced")
-        continue;
-      if (!this.plugin.isInSyncFolder(path))
-        continue;
-      const file = this.plugin.app.vault.getAbstractFileByPath(path);
-      if (file instanceof import_obsidian5.TFile && file.extension === "md") {
-        files.push(file);
-      }
-    }
-    return files;
   }
   tokenize(text) {
     const stopTokens = /* @__PURE__ */ new Set([
@@ -5199,15 +2466,11 @@ ${content.slice(0, 4e3)}`.toLowerCase();
     const tokens = /* @__PURE__ */ new Set();
     for (const raw of normalized.split(/\s+/)) {
       const token = raw.trim();
-      if (token.length < 2)
-        continue;
-      if (/^\d+$/.test(token))
-        continue;
-      if (stopTokens.has(token))
-        continue;
+      if (token.length < 2) continue;
+      if (/^\d+$/.test(token)) continue;
+      if (stopTokens.has(token)) continue;
       tokens.add(token);
-      if (tokens.size >= 32)
-        break;
+      if (tokens.size >= 32) break;
     }
     return Array.from(tokens);
   }
@@ -5238,8 +2501,7 @@ ${content.slice(0, 4e3)}`.toLowerCase();
       const timer = window.setTimeout(() => {
         settled = true;
         child.kill();
-        if (this.activeChild === child)
-          this.activeChild = null;
+        if (this.activeChild === child) this.activeChild = null;
         void this.appendAgentLog(logPath, {
           event: "timeout",
           timeoutMs,
@@ -5273,11 +2535,9 @@ ${content.slice(0, 4e3)}`.toLowerCase();
         }
       });
       child.on("error", (error) => {
-        if (settled)
-          return;
+        if (settled) return;
         settled = true;
-        if (this.activeChild === child)
-          this.activeChild = null;
+        if (this.activeChild === child) this.activeChild = null;
         window.clearTimeout(timer);
         void this.appendAgentLog(logPath, {
           event: "error",
@@ -5297,11 +2557,9 @@ ${content.slice(0, 4e3)}`.toLowerCase();
         reject(Object.assign(error, { stdout, stderr }));
       });
       child.on("close", (code) => {
-        if (settled)
-          return;
+        if (settled) return;
         settled = true;
-        if (this.activeChild === child)
-          this.activeChild = null;
+        if (this.activeChild === child) this.activeChild = null;
         window.clearTimeout(timer);
         void this.appendAgentLog(logPath, {
           event: "close",
@@ -5332,13 +2590,13 @@ ${content.slice(0, 4e3)}`.toLowerCase();
   }
   async createAgentLog(prompt, command, timeoutSeconds) {
     const folder = await this.plugin.ensureWorkspaceFolder("logs");
-    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const stamp = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-");
     const vaultPath = `${folder}/agent-${stamp}.jsonl`;
     const agyVaultPath = `${folder}/agent-${stamp}.agy.log`;
     const agyAbsolutePath = (0, import_path.join)(this.plugin.getVaultPath(), agyVaultPath);
     const initial = {
       event: "start",
-      timestamp: new Date().toISOString(),
+      timestamp: (/* @__PURE__ */ new Date()).toISOString(),
       command,
       timeoutSeconds,
       permissionMode: this.plugin.settings.agentPermissionMode,
@@ -5355,10 +2613,9 @@ ${content.slice(0, 4e3)}`.toLowerCase();
   async appendAgentLog(path, event) {
     try {
       const file = this.plugin.app.vault.getAbstractFileByPath(path);
-      if (!(file instanceof import_obsidian5.TFile))
-        return;
+      if (!(file instanceof import_obsidian3.TFile)) return;
       await this.plugin.app.vault.append(file, `${JSON.stringify({
-        timestamp: new Date().toISOString(),
+        timestamp: (/* @__PURE__ */ new Date()).toISOString(),
         ...event
       })}
 `);
@@ -5378,11 +2635,9 @@ ${content.slice(0, 4e3)}`.toLowerCase();
     const env = {};
     for (const line of raw.split("\n")) {
       const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith("#"))
-        continue;
+      if (!trimmed || trimmed.startsWith("#")) continue;
       const idx = trimmed.indexOf("=");
-      if (idx <= 0)
-        continue;
+      if (idx <= 0) continue;
       env[trimmed.slice(0, idx).trim()] = trimmed.slice(idx + 1).trim();
     }
     return env;
@@ -5411,8 +2666,7 @@ ${content.slice(0, 4e3)}`.toLowerCase();
     for (const dir of paths) {
       for (const ext of extensions) {
         const candidate = (0, import_path.join)(dir, `${command}${ext}`);
-        if ((0, import_fs.existsSync)(candidate))
-          return candidate;
+        if ((0, import_fs.existsSync)(candidate)) return candidate;
       }
     }
     return null;
@@ -5455,55 +2709,38 @@ ${content.slice(0, 4e3)}`.toLowerCase();
 };
 
 // src/main.ts
-var GeminiSyncPlugin = class extends import_obsidian6.Plugin {
+var MokAgyPlugin = class extends import_obsidian4.Plugin {
   async onload() {
-    console.log("Loading Master of Knowledge Plugin");
+    console.log("Loading Master of Knowledge AGY Plugin");
     await this.loadSettings();
-    this.geminiService = new GeminiService(this);
-    this.syncEngine = new SyncEngine(this, this.geminiService);
     this.agentService = new AgentService(this);
     await this.ensureDefaultWorkspaceFolders();
-    await this.reconcileBudgetFromLog();
     this.registerView(
       CHAT_VIEW_TYPE,
       (leaf) => new ChatView(leaf, this)
     );
-    this.addRibbonIcon("brain-circuit", "Open Master of Knowledge", () => {
+    this.addRibbonIcon("brain-circuit", "Open Master of Knowledge AGY", () => {
       this.activateChatView();
     });
-    this.addSettingTab(new GeminiSyncSettingTab(this.app, this));
+    this.addSettingTab(new MokAgySettingTab(this.app, this));
     this.statusBarItem = this.addStatusBarItem();
     this.updateStatusBar("Ready");
-    this.registerFileEvents();
     this.addCommand({
-      id: "open-gemini-chat",
-      name: "Open Master of Knowledge",
+      id: "open-master-of-knowledge-agy",
+      name: "Open Master of Knowledge AGY",
       callback: () => {
         this.activateChatView();
       }
     });
-    this.addCommand({
-      id: "force-sync-all",
-      name: "Force Sync All Files",
-      callback: async () => {
-        if (!this.settings.apiKey) {
-          new import_obsidian6.Notice("Please configure your Gemini API key first");
-          return;
-        }
-        await this.syncEngine.fullSync();
-      }
-    });
-    if (this.settings.apiKey && this.settings.syncFolders.length > 0) {
-      setTimeout(() => {
-        this.syncEngine.initialSync();
-      }, 2e3);
-    }
   }
   onunload() {
-    console.log("Unloading Master of Knowledge Plugin");
+    console.log("Unloading Master of Knowledge AGY Plugin");
   }
   async loadSettings() {
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+    this.settings.apiKey = "";
+    this.settings.autoSync = false;
+    this.settings.corpusName = "";
     const configuredFolders = Array.isArray(this.settings.syncFolders) ? this.settings.syncFolders : [];
     this.settings.syncFolders = Array.from(new Set([
       ...this.settings.syncFolder ? [this.settings.syncFolder] : [],
@@ -5518,13 +2755,6 @@ var GeminiSyncPlugin = class extends import_obsidian6.Plugin {
       this.settings.agentOutputFolder || `${this.settings.workspaceFolder}/agent`,
       `${this.settings.workspaceFolder}/agent`
     );
-    this.settings.monthlyBudgetUsd = Number.isFinite(this.settings.monthlyBudgetUsd) ? this.settings.monthlyBudgetUsd : DEFAULT_SETTINGS.monthlyBudgetUsd;
-    this.settings.estimatedMonthlySpendUsd = Number.isFinite(this.settings.estimatedMonthlySpendUsd) ? this.settings.estimatedMonthlySpendUsd : DEFAULT_SETTINGS.estimatedMonthlySpendUsd;
-    this.settings.estimatedMonthlySpendMonth = this.settings.estimatedMonthlySpendMonth || this.getCurrentBudgetMonth();
-    if (this.settings.estimatedMonthlySpendMonth !== this.getCurrentBudgetMonth()) {
-      this.settings.estimatedMonthlySpendMonth = this.getCurrentBudgetMonth();
-      this.settings.estimatedMonthlySpendUsd = 0;
-    }
     this.settings.agentCliPath = this.settings.agentCliPath || DEFAULT_SETTINGS.agentCliPath;
     this.settings.agentModel = this.settings.agentModel || DEFAULT_SETTINGS.agentModel;
     this.settings.agentPermissionMode = this.settings.agentPermissionMode || DEFAULT_SETTINGS.agentPermissionMode;
@@ -5536,99 +2766,15 @@ var GeminiSyncPlugin = class extends import_obsidian6.Plugin {
       this.settings.agentObsidianSkillPath || DEFAULT_SETTINGS.agentObsidianSkillPath,
       DEFAULT_SETTINGS.agentObsidianSkillPath
     );
+    this.settings.files = this.settings.files || {};
+    await this.saveData(this.settings);
   }
   async saveSettings() {
     await this.saveData(this.settings);
     this.updateChatViewSyncStatus();
   }
-  async recordBudgetUsage(event) {
-    const month = this.getCurrentBudgetMonth();
-    if (this.settings.estimatedMonthlySpendMonth !== month) {
-      this.settings.estimatedMonthlySpendMonth = month;
-      this.settings.estimatedMonthlySpendUsd = 0;
-    }
-    const loggedSpend = await this.readBudgetLogTotal(month);
-    const estimatedMonthlySpendUsd = Number((loggedSpend + event.estimatedCostUsd).toFixed(6));
-    const logEntry = {
-      timestamp: new Date().toISOString(),
-      month,
-      ...event,
-      monthlyBudgetUsd: this.settings.monthlyBudgetUsd,
-      estimatedMonthlySpendUsd
-    };
-    try {
-      const folder = await this.ensureWorkspaceFolder("logs");
-      const filePath = `${folder}/budget-${month}.jsonl`;
-      const line = `${JSON.stringify(logEntry)}
-`;
-      const existing = this.app.vault.getAbstractFileByPath(filePath);
-      if (existing instanceof import_obsidian6.TFile) {
-        await this.app.vault.append(existing, line);
-      } else {
-        await this.app.vault.create(filePath, line);
-      }
-      this.settings.estimatedMonthlySpendUsd = estimatedMonthlySpendUsd;
-      await this.saveSettings();
-    } catch (error) {
-      console.warn("Failed to write budget usage log:", error);
-      this.settings.estimatedMonthlySpendUsd = Number(((this.settings.estimatedMonthlySpendUsd || 0) + event.estimatedCostUsd).toFixed(6));
-      await this.saveSettings();
-    }
-  }
-  async reconcileBudgetFromLog() {
-    const month = this.getCurrentBudgetMonth();
-    if (this.settings.estimatedMonthlySpendMonth !== month) {
-      this.settings.estimatedMonthlySpendMonth = month;
-      this.settings.estimatedMonthlySpendUsd = 0;
-    }
-    const loggedSpend = await this.readBudgetLogTotal(month);
-    if (loggedSpend > 0 && Math.abs((this.settings.estimatedMonthlySpendUsd || 0) - loggedSpend) > 1e-6) {
-      this.settings.estimatedMonthlySpendUsd = loggedSpend;
-      await this.saveSettings();
-    }
-  }
-  async readBudgetLogTotal(month) {
-    try {
-      const root = this.normalizeFolder(this.settings.workspaceFolder, DEFAULT_SETTINGS.workspaceFolder);
-      const filePath = `${root}/logs/budget-${month}.jsonl`;
-      const existing = this.app.vault.getAbstractFileByPath(filePath);
-      if (!(existing instanceof import_obsidian6.TFile))
-        return 0;
-      const text = await this.app.vault.cachedRead(existing);
-      const total = text.split("\n").map((line) => line.trim()).filter(Boolean).reduce((sum, line) => {
-        try {
-          const entry = JSON.parse(line);
-          if (entry.month && entry.month !== month)
-            return sum;
-          if (entry.type && entry.type !== "chat")
-            return sum;
-          return sum + Number(entry.estimatedCostUsd || 0);
-        } catch (e) {
-          return sum;
-        }
-      }, 0);
-      return Number(total.toFixed(6));
-    } catch (error) {
-      console.warn("Failed to read budget usage log:", error);
-      return 0;
-    }
-  }
-  estimateGeminiCost(model, inputTokens, outputTokens) {
-    const rates = this.getEstimatedGeminiRates(model);
-    return Number((inputTokens / 1e6 * rates.inputUsdPerMillion + outputTokens / 1e6 * rates.outputUsdPerMillion).toFixed(6));
-  }
   estimateTokens(text) {
     return Math.max(1, Math.ceil(text.length / 4));
-  }
-  getCurrentBudgetMonth() {
-    return new Date().toISOString().slice(0, 7);
-  }
-  getEstimatedGeminiRates(model) {
-    if (model.includes("lite"))
-      return { inputUsdPerMillion: 0.1, outputUsdPerMillion: 0.4 };
-    if (model.includes("pro"))
-      return { inputUsdPerMillion: 1.25, outputUsdPerMillion: 10 };
-    return { inputUsdPerMillion: 0.3, outputUsdPerMillion: 2.5 };
   }
   // Update sync status in chat view if it's open
   updateChatViewSyncStatus() {
@@ -5640,50 +2786,16 @@ var GeminiSyncPlugin = class extends import_obsidian6.Plugin {
       }
     }
   }
-  registerFileEvents() {
-    this.registerEvent(
-      this.app.vault.on("create", async (file) => {
-        if (this.settings.apiKey && file instanceof import_obsidian6.TFile && this.shouldSync(file)) {
-          console.log("File created:", file.path);
-          await this.syncEngine.handleFileCreate(file);
-        }
-      })
-    );
-    this.registerEvent(
-      this.app.vault.on("modify", async (file) => {
-        if (this.settings.apiKey && file instanceof import_obsidian6.TFile && this.shouldSync(file)) {
-          console.log("File modified:", file.path);
-          await this.syncEngine.handleFileModify(file);
-        }
-      })
-    );
-    this.registerEvent(
-      this.app.vault.on("delete", async (file) => {
-        if (this.settings.apiKey && file instanceof import_obsidian6.TFile && this.shouldSync(file)) {
-          console.log("File deleted:", file.path);
-          await this.syncEngine.handleFileDelete(file);
-        }
-      })
-    );
-    this.registerEvent(
-      this.app.vault.on("rename", async (file, oldPath) => {
-        if (file instanceof import_obsidian6.TFile) {
-          const wasInSyncFolder = this.isInSyncFolder(oldPath);
-          const isInSyncFolder = this.shouldSync(file);
-          if (this.settings.apiKey && (wasInSyncFolder || isInSyncFolder)) {
-            console.log("File renamed:", oldPath, "->", file.path);
-            await this.syncEngine.handleFileRename(file, oldPath);
-          }
-        }
-      })
-    );
-  }
   shouldSync(file) {
-    if (this.settings.syncFolders.length === 0)
-      return false;
-    if (file.extension !== "md")
-      return false;
+    if (this.settings.syncFolders.length === 0) return false;
+    if (file.extension !== "md") return false;
     return this.isInSyncFolder(file.path);
+  }
+  getKnowledgeMarkdownFiles() {
+    if (this.settings.syncFolders.length === 0) return [];
+    return this.app.vault.getMarkdownFiles().filter(
+      (file) => file.extension === "md" && this.isInSyncFolder(file.path)
+    );
   }
   isInSyncFolder(path) {
     return this.settings.syncFolders.some(
@@ -5691,7 +2803,7 @@ var GeminiSyncPlugin = class extends import_obsidian6.Plugin {
     );
   }
   updateStatusBar(status) {
-    this.statusBarItem.setText(`MoK: ${status}`);
+    this.statusBarItem.setText(`MoK AGY: ${status}`);
   }
   getVaultPath() {
     const adapter = this.app.vault.adapter;
@@ -5747,8 +2859,7 @@ var GeminiSyncPlugin = class extends import_obsidian6.Plugin {
       DEFAULT_SETTINGS.agentObsidianSkillPath
     );
     const folder = skillPath.split("/").slice(0, -1).join("/");
-    if (folder)
-      await this.ensureVaultFolder(folder);
+    if (folder) await this.ensureVaultFolder(folder);
     const content = [
       "# Obsidian Writing Skill",
       "",
@@ -5763,7 +2874,7 @@ var GeminiSyncPlugin = class extends import_obsidian6.Plugin {
       "- Do not claim a file was saved unless the file was actually written.",
       "",
       "## Source Discipline",
-      "- Cite vault note paths when using synced note evidence.",
+      "- Cite vault note paths when using local context note evidence.",
       "- Separate note-grounded claims from general suggestions.",
       "- If evidence is weak or missing, say so plainly.",
       "",
@@ -5772,7 +2883,7 @@ var GeminiSyncPlugin = class extends import_obsidian6.Plugin {
       "- Avoid stiff translation tone; write as a practical Obsidian note the user can keep."
     ].join("\n");
     const existing = this.app.vault.getAbstractFileByPath(skillPath);
-    if (existing instanceof import_obsidian6.TFile) {
+    if (existing instanceof import_obsidian4.TFile) {
       await this.app.vault.modify(existing, content);
     } else {
       await this.app.vault.create(skillPath, content);
@@ -5785,8 +2896,7 @@ var GeminiSyncPlugin = class extends import_obsidian6.Plugin {
   openPluginSettings() {
     var _a;
     const setting = this.app.setting;
-    if (!setting)
-      return;
+    if (!setting) return;
     setting.open();
     (_a = setting.openTabById) == null ? void 0 : _a.call(setting, this.manifest.id);
   }
@@ -5807,41 +2917,3 @@ var GeminiSyncPlugin = class extends import_obsidian6.Plugin {
     }
   }
 };
-/*! Bundled license information:
-
-@google/generative-ai/dist/index.mjs:
-  (**
-   * @license
-   * Copyright 2024 Google LLC
-   *
-   * Licensed under the Apache License, Version 2.0 (the "License");
-   * you may not use this file except in compliance with the License.
-   * You may obtain a copy of the License at
-   *
-   *   http://www.apache.org/licenses/LICENSE-2.0
-   *
-   * Unless required by applicable law or agreed to in writing, software
-   * distributed under the License is distributed on an "AS IS" BASIS,
-   * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   * See the License for the specific language governing permissions and
-   * limitations under the License.
-   *)
-
-@google/generative-ai/dist/index.mjs:
-  (**
-   * @license
-   * Copyright 2024 Google LLC
-   *
-   * Licensed under the Apache License, Version 2.0 (the "License");
-   * you may not use this file except in compliance with the License.
-   * You may obtain a copy of the License at
-   *
-   *   http://www.apache.org/licenses/LICENSE-2.0
-   *
-   * Unless required by applicable law or agreed to in writing, software
-   * distributed under the License is distributed on an "AS IS" BASIS,
-   * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   * See the License for the specific language governing permissions and
-   * limitations under the License.
-   *)
-*/

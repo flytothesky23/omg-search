@@ -1,38 +1,22 @@
-import { Plugin, WorkspaceLeaf, TFile, TAbstractFile, Notice } from 'obsidian';
-import { GeminiSyncSettings, DEFAULT_SETTINGS, GeminiSyncSettingTab } from './settings';
-import { GeminiService } from './gemini-service';
-import { SyncEngine } from './sync-engine';
+import { Plugin, WorkspaceLeaf, TFile } from 'obsidian';
+import { MokAgySettings, DEFAULT_SETTINGS, MokAgySettingTab } from './settings';
 import { ChatView, CHAT_VIEW_TYPE } from './chat-view';
 import { AgentService } from './agent-service';
 
-export interface BudgetUsageEvent {
-	type: 'chat';
-	model: string;
-	inputTokens: number;
-	outputTokens: number;
-	estimatedCostUsd: number;
-	success?: boolean;
-}
-
-export default class GeminiSyncPlugin extends Plugin {
-	settings: GeminiSyncSettings;
-	geminiService: GeminiService;
-	syncEngine: SyncEngine;
+export default class MokAgyPlugin extends Plugin {
+	settings: MokAgySettings;
 	agentService: AgentService;
 	statusBarItem: HTMLElement;
 
 	async onload() {
-		console.log('Loading Master of Knowledge Plugin');
+		console.log('Loading Master of Knowledge AGY Plugin');
 
 		// Load settings
 		await this.loadSettings();
 
 		// Initialize services
-		this.geminiService = new GeminiService(this);
-		this.syncEngine = new SyncEngine(this, this.geminiService);
 		this.agentService = new AgentService(this);
 		await this.ensureDefaultWorkspaceFolders();
-		await this.reconcileBudgetFromLog();
 
 		// Register chat view
 		this.registerView(
@@ -41,58 +25,39 @@ export default class GeminiSyncPlugin extends Plugin {
 		);
 
 		// Add ribbon icon for chat
-		this.addRibbonIcon('brain-circuit', 'Open Master of Knowledge', () => {
+		this.addRibbonIcon('brain-circuit', 'Open Master of Knowledge AGY', () => {
 			this.activateChatView();
 		});
 
 		// Add settings tab
-		this.addSettingTab(new GeminiSyncSettingTab(this.app, this));
+		this.addSettingTab(new MokAgySettingTab(this.app, this));
 
 		// Add status bar item
 		this.statusBarItem = this.addStatusBarItem();
 		this.updateStatusBar('Ready');
 
-		// Register file events immediately so auto-sync starts working after
-		// the user configures an API key without requiring a plugin reload.
-		this.registerFileEvents();
-
 		// Add command to open chat
 		this.addCommand({
-			id: 'open-gemini-chat',
-			name: 'Open Master of Knowledge',
+			id: 'open-master-of-knowledge-agy',
+			name: 'Open Master of Knowledge AGY',
 			callback: () => {
 				this.activateChatView();
 			}
 		});
 
-		// Add command to force sync
-		this.addCommand({
-			id: 'force-sync-all',
-			name: 'Force Sync All Files',
-			callback: async () => {
-				if (!this.settings.apiKey) {
-					new Notice('Please configure your Gemini API key first');
-					return;
-				}
-				await this.syncEngine.fullSync();
-			}
-		});
-
-		// Initial sync on load (if configured)
-		if (this.settings.apiKey && this.settings.syncFolders.length > 0) {
-			// Delay initial sync to let vault fully load
-			setTimeout(() => {
-				this.syncEngine.initialSync();
-			}, 2000);
-		}
+		// Gemini API sync is disabled in this fork. The selected folders are
+		// used only as local context for Antigravity CLI Agent runs.
 	}
 
 	onunload() {
-		console.log('Unloading Master of Knowledge Plugin');
+		console.log('Unloading Master of Knowledge AGY Plugin');
 	}
 
 	async loadSettings() {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		this.settings.apiKey = '';
+		this.settings.autoSync = false;
+		this.settings.corpusName = '';
 		const configuredFolders = Array.isArray(this.settings.syncFolders)
 			? this.settings.syncFolders
 			: [];
@@ -109,13 +74,6 @@ export default class GeminiSyncPlugin extends Plugin {
 			this.settings.agentOutputFolder || `${this.settings.workspaceFolder}/agent`,
 			`${this.settings.workspaceFolder}/agent`
 		);
-		this.settings.monthlyBudgetUsd = Number.isFinite(this.settings.monthlyBudgetUsd) ? this.settings.monthlyBudgetUsd : DEFAULT_SETTINGS.monthlyBudgetUsd;
-		this.settings.estimatedMonthlySpendUsd = Number.isFinite(this.settings.estimatedMonthlySpendUsd) ? this.settings.estimatedMonthlySpendUsd : DEFAULT_SETTINGS.estimatedMonthlySpendUsd;
-		this.settings.estimatedMonthlySpendMonth = this.settings.estimatedMonthlySpendMonth || this.getCurrentBudgetMonth();
-		if (this.settings.estimatedMonthlySpendMonth !== this.getCurrentBudgetMonth()) {
-			this.settings.estimatedMonthlySpendMonth = this.getCurrentBudgetMonth();
-			this.settings.estimatedMonthlySpendUsd = 0;
-		}
 		this.settings.agentCliPath = this.settings.agentCliPath || DEFAULT_SETTINGS.agentCliPath;
 		this.settings.agentModel = this.settings.agentModel || DEFAULT_SETTINGS.agentModel;
 		this.settings.agentPermissionMode = this.settings.agentPermissionMode || DEFAULT_SETTINGS.agentPermissionMode;
@@ -131,6 +89,8 @@ export default class GeminiSyncPlugin extends Plugin {
 			this.settings.agentObsidianSkillPath || DEFAULT_SETTINGS.agentObsidianSkillPath,
 			DEFAULT_SETTINGS.agentObsidianSkillPath
 		);
+		this.settings.files = this.settings.files || {};
+		await this.saveData(this.settings);
 	}
 
 	async saveSettings() {
@@ -139,108 +99,8 @@ export default class GeminiSyncPlugin extends Plugin {
 		this.updateChatViewSyncStatus();
 	}
 
-	async recordBudgetUsage(event: BudgetUsageEvent) {
-		const month = this.getCurrentBudgetMonth();
-		if (this.settings.estimatedMonthlySpendMonth !== month) {
-			this.settings.estimatedMonthlySpendMonth = month;
-			this.settings.estimatedMonthlySpendUsd = 0;
-		}
-
-		const loggedSpend = await this.readBudgetLogTotal(month);
-		const estimatedMonthlySpendUsd = Number((loggedSpend + event.estimatedCostUsd).toFixed(6));
-
-		const logEntry = {
-			timestamp: new Date().toISOString(),
-			month,
-			...event,
-			monthlyBudgetUsd: this.settings.monthlyBudgetUsd,
-			estimatedMonthlySpendUsd
-		};
-
-		try {
-			const folder = await this.ensureWorkspaceFolder('logs');
-			const filePath = `${folder}/budget-${month}.jsonl`;
-			const line = `${JSON.stringify(logEntry)}\n`;
-			const existing = this.app.vault.getAbstractFileByPath(filePath);
-			if (existing instanceof TFile) {
-				await this.app.vault.append(existing, line);
-			} else {
-				await this.app.vault.create(filePath, line);
-			}
-			this.settings.estimatedMonthlySpendUsd = estimatedMonthlySpendUsd;
-			await this.saveSettings();
-		} catch (error) {
-			console.warn('Failed to write budget usage log:', error);
-			this.settings.estimatedMonthlySpendUsd = Number((
-				(this.settings.estimatedMonthlySpendUsd || 0) + event.estimatedCostUsd
-			).toFixed(6));
-			await this.saveSettings();
-		}
-	}
-
-	async reconcileBudgetFromLog() {
-		const month = this.getCurrentBudgetMonth();
-		if (this.settings.estimatedMonthlySpendMonth !== month) {
-			this.settings.estimatedMonthlySpendMonth = month;
-			this.settings.estimatedMonthlySpendUsd = 0;
-		}
-
-		const loggedSpend = await this.readBudgetLogTotal(month);
-		if (loggedSpend > 0 && Math.abs((this.settings.estimatedMonthlySpendUsd || 0) - loggedSpend) > 0.000001) {
-			this.settings.estimatedMonthlySpendUsd = loggedSpend;
-			await this.saveSettings();
-		}
-	}
-
-	private async readBudgetLogTotal(month: string): Promise<number> {
-		try {
-			const root = this.normalizeFolder(this.settings.workspaceFolder, DEFAULT_SETTINGS.workspaceFolder);
-			const filePath = `${root}/logs/budget-${month}.jsonl`;
-			const existing = this.app.vault.getAbstractFileByPath(filePath);
-			if (!(existing instanceof TFile)) return 0;
-
-			const text = await this.app.vault.cachedRead(existing);
-			const total = text
-				.split('\n')
-				.map(line => line.trim())
-				.filter(Boolean)
-				.reduce((sum, line) => {
-					try {
-						const entry = JSON.parse(line);
-						if (entry.month && entry.month !== month) return sum;
-						if (entry.type && entry.type !== 'chat') return sum;
-						return sum + Number(entry.estimatedCostUsd || 0);
-					} catch {
-						return sum;
-					}
-				}, 0);
-			return Number(total.toFixed(6));
-		} catch (error) {
-			console.warn('Failed to read budget usage log:', error);
-			return 0;
-		}
-	}
-
-	estimateGeminiCost(model: string, inputTokens: number, outputTokens: number): number {
-		const rates = this.getEstimatedGeminiRates(model);
-		return Number((
-			(inputTokens / 1_000_000) * rates.inputUsdPerMillion +
-			(outputTokens / 1_000_000) * rates.outputUsdPerMillion
-		).toFixed(6));
-	}
-
 	estimateTokens(text: string): number {
 		return Math.max(1, Math.ceil(text.length / 4));
-	}
-
-	getCurrentBudgetMonth(): string {
-		return new Date().toISOString().slice(0, 7);
-	}
-
-	private getEstimatedGeminiRates(model: string): { inputUsdPerMillion: number; outputUsdPerMillion: number } {
-		if (model.includes('lite')) return { inputUsdPerMillion: 0.1, outputUsdPerMillion: 0.4 };
-		if (model.includes('pro')) return { inputUsdPerMillion: 1.25, outputUsdPerMillion: 10 };
-		return { inputUsdPerMillion: 0.3, outputUsdPerMillion: 2.5 };
 	}
 
 	// Update sync status in chat view if it's open
@@ -254,57 +114,17 @@ export default class GeminiSyncPlugin extends Plugin {
 		}
 	}
 
-	registerFileEvents() {
-		// File created
-		this.registerEvent(
-			this.app.vault.on('create', async (file: TAbstractFile) => {
-				if (this.settings.apiKey && file instanceof TFile && this.shouldSync(file)) {
-					console.log('File created:', file.path);
-					await this.syncEngine.handleFileCreate(file);
-				}
-			})
-		);
-
-		// File modified
-		this.registerEvent(
-			this.app.vault.on('modify', async (file: TAbstractFile) => {
-				if (this.settings.apiKey && file instanceof TFile && this.shouldSync(file)) {
-					console.log('File modified:', file.path);
-					await this.syncEngine.handleFileModify(file);
-				}
-			})
-		);
-
-		// File deleted
-		this.registerEvent(
-			this.app.vault.on('delete', async (file: TAbstractFile) => {
-				if (this.settings.apiKey && file instanceof TFile && this.shouldSync(file)) {
-					console.log('File deleted:', file.path);
-					await this.syncEngine.handleFileDelete(file);
-				}
-			})
-		);
-
-		// File renamed/moved
-		this.registerEvent(
-			this.app.vault.on('rename', async (file: TAbstractFile, oldPath: string) => {
-				if (file instanceof TFile) {
-					const wasInSyncFolder = this.isInSyncFolder(oldPath);
-					const isInSyncFolder = this.shouldSync(file);
-
-					if (this.settings.apiKey && (wasInSyncFolder || isInSyncFolder)) {
-						console.log('File renamed:', oldPath, '->', file.path);
-						await this.syncEngine.handleFileRename(file, oldPath);
-					}
-				}
-			})
-		);
-	}
-
 	shouldSync(file: TFile): boolean {
 		if (this.settings.syncFolders.length === 0) return false;
 		if (file.extension !== 'md') return false;
 		return this.isInSyncFolder(file.path);
+	}
+
+	getKnowledgeMarkdownFiles(): TFile[] {
+		if (this.settings.syncFolders.length === 0) return [];
+		return this.app.vault.getMarkdownFiles().filter(file =>
+			file.extension === 'md' && this.isInSyncFolder(file.path)
+		);
 	}
 
 	isInSyncFolder(path: string): boolean {
@@ -314,7 +134,7 @@ export default class GeminiSyncPlugin extends Plugin {
 	}
 
 	updateStatusBar(status: string) {
-		this.statusBarItem.setText(`MoK: ${status}`);
+		this.statusBarItem.setText(`MoK AGY: ${status}`);
 	}
 
 	getVaultPath(): string {
@@ -400,7 +220,7 @@ export default class GeminiSyncPlugin extends Plugin {
 			'- Do not claim a file was saved unless the file was actually written.',
 			'',
 			'## Source Discipline',
-			'- Cite vault note paths when using synced note evidence.',
+			'- Cite vault note paths when using local context note evidence.',
 			'- Separate note-grounded claims from general suggestions.',
 			'- If evidence is weak or missing, say so plainly.',
 			'',

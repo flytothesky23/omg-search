@@ -1,7 +1,7 @@
 {
-	"name": "master-of-knowledge",
+	"name": "master-of-knowledge-agy",
 	"version": "2.0.36",
-	"description": "Obsidian knowledge workspace powered by Gemini File Search and local agents",
+	"description": "Obsidian knowledge workspace powered by Antigravity CLI OAuth agent workflows",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
@@ -10,8 +10,8 @@
 	},
 	"keywords": [
 		"obsidian",
-		"gemini",
-		"sync",
+		"antigravity",
+		"oauth",
 		"ai",
 		"rag"
 	],
@@ -20,12 +20,9 @@
 	"devDependencies": {
 		"@types/node": "^16.11.6",
 		"builtin-modules": "^3.3.0",
-		"esbuild": "0.17.3",
+		"esbuild": "^0.25.12",
 		"obsidian": "latest",
 		"tslib": "2.4.0",
 		"typescript": "4.7.4"
-	},
-	"dependencies": {
-		"@google/generative-ai": "^0.21.0"
 	}
 }

@@ -1,9 +1,9 @@
 {
-	"id": "master-of-knowledge",
-	"name": "Master of Knowledge",
+	"id": "master-of-knowledge-agy",
+	"name": "Master of Knowledge AGY",
 	"version": "2.0.36",
 	"minAppVersion": "1.0.0",
-	"description": "Turn your vault into a Gemini File Search and Agent-powered knowledge workspace.",
+	"description": "Run Antigravity CLI OAuth agent workflows over local Obsidian context folders.",
 	"author": "김문정",
 	"authorUrl": "https://github.com/reallygood83",
 	"isDesktopOnly": true
