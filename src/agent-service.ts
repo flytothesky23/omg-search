@@ -3,6 +3,7 @@ import { ChildProcessWithoutNullStreams, spawn } from 'child_process';
 import { existsSync } from 'fs';
 import { homedir } from 'os';
 import { delimiter, isAbsolute, join } from 'path';
+import { StringDecoder } from 'string_decoder';
 import MokAgyPlugin from './main';
 
 export interface AgentRunResult {
@@ -66,7 +67,7 @@ export class AgentService {
 				});
 			}
 			const { stdout, stderr } = await this.exec(resolvedCommand, args, logRef.vaultPath, onChunk);
-			const output = [stdout.trim(), stderr.trim() ? `\n\n---\nAgent stderr:\n${stderr.trim()}` : '']
+			const output = [stdout.trim(), stderr.trim() ? `\n\n---\n에이전트 stderr:\n${stderr.trim()}` : '']
 				.join('')
 				.trim();
 			await this.appendAgentLog(logRef.vaultPath, {
@@ -75,7 +76,7 @@ export class AgentService {
 				durationMs: Date.now() - started
 			});
 			return {
-				content: output || 'Agent completed without text output.',
+				content: output || '에이전트가 텍스트 출력 없이 완료되었습니다.',
 				command: `${resolvedCommand} --print`,
 				exitCode: 0,
 				durationMs: Date.now() - started,
@@ -90,7 +91,7 @@ export class AgentService {
 					durationMs: Date.now() - started
 				});
 				return {
-					content: 'Agent run stopped by user.',
+					content: '사용자가 에이전트 실행을 중지했습니다.',
 					command: `${resolvedCommand || command} --print`,
 					exitCode: null,
 					durationMs: Date.now() - started,
@@ -101,16 +102,16 @@ export class AgentService {
 			}
 			const stdout = String(error?.stdout || '').trim();
 			const stderr = String(error?.stderr || '').trim();
-			const message = stderr || stdout || error?.message || 'Unknown agent error';
+			const message = stderr || stdout || error?.message || '알 수 없는 에이전트 오류';
 			await this.appendAgentLog(logRef.vaultPath, {
 				event: 'failed',
 				errorCode: error?.code ?? null,
 				message,
 				durationMs: Date.now() - started
 			});
-			new Notice('Agent run failed. Check the result card for details.');
+			new Notice('에이전트 실행에 실패했습니다. 결과 카드를 확인하세요.');
 			return {
-				content: `Agent run failed.\n\n${message}`,
+				content: `에이전트 실행에 실패했습니다.\n\n${message}`,
 				command: `${resolvedCommand || command} --print`,
 				exitCode: typeof error?.code === 'number' ? error.code : null,
 				durationMs: Date.now() - started,
@@ -149,7 +150,7 @@ export class AgentService {
 		const workspaceFolder = this.plugin.settings.workspaceFolder;
 		const agentOutputFolder = await this.plugin.ensureVaultFolder(this.plugin.settings.agentOutputFolder);
 		const trustMode = this.plugin.settings.agentPermissionMode;
-		const scope = this.plugin.settings.syncFolders.join(', ') || 'No context folders selected';
+		const scope = this.plugin.settings.syncFolders.join(', ') || '선택된 문맥 폴더 없음';
 		const webSearch = this.plugin.settings.agentWebSearchEnabled;
 		const obsidianSkill = await this.getObsidianSkillContext();
 		const contextNotes = await this.buildLocalNotesContext(prompt);
@@ -159,7 +160,7 @@ export class AgentService {
 			try {
 				const content = await this.plugin.app.vault.read(activeFile);
 				activeNoteContent = content.length > 6000
-					? `${content.slice(0, 6000)}\n...[active note truncated]`
+					? `${content.slice(0, 6000)}\n...[현재 노트 발췌 생략]`
 					: content;
 			} catch {
 				activeNoteContent = '';
@@ -167,31 +168,34 @@ export class AgentService {
 		}
 
 		return [
-			'You are running inside the Master of Knowledge Obsidian plugin.',
-			`Vault workspace path: ${this.plugin.getVaultPath()}.`,
-			`Trust mode: ${trustMode}.`,
-			`Web search mode: ${webSearch ? 'enabled' : 'disabled'}.`,
-			`Workspace folder for generated artifacts: ${workspaceFolder}.`,
-			`Agent output folder for generated notes: ${agentOutputFolder}.`,
-			'All generated files must stay inside the current Obsidian vault. Treat the Agent output folder as a vault-relative path, not an external filesystem destination.',
-			'If you create a note file, save it inside the Agent output folder and include its vault-relative markdown link in the response. If you only draft text in chat, do not claim that a file was saved.',
+			'당신은 지식 마스터 AGY Obsidian 플러그인 안에서 실행되는 에이전트입니다.',
+			'사용자가 읽는 모든 응답, 설명, 제목, 목록, 노트 본문은 한국어로 작성하세요.',
+			'명령어, 파일명, 모델명, API명, vault 경로, 코드 식별자 같은 고유명사는 원문을 유지할 수 있지만, 일반 설명 문장에는 영어를 섞지 마세요.',
+			'한글이 깨지지 않도록 UTF-8 기준의 정상 한국어 문장으로 출력하세요. 깨진 문자나 검은 물음표 모양 대체 문자가 보이면 같은 뜻의 자연스러운 한국어로 다시 작성하세요.',
+			`Vault 작업공간 경로: ${this.plugin.getVaultPath()}.`,
+			`신뢰 모드: ${trustMode}.`,
+			`웹 검색 모드: ${webSearch ? '켜짐' : '꺼짐'}.`,
+			`생성 산출물 작업공간 폴더: ${workspaceFolder}.`,
+			`에이전트 생성 노트 폴더: ${agentOutputFolder}.`,
+			'생성 파일은 반드시 현재 Obsidian vault 안에 두세요. 에이전트 결과 폴더는 외부 파일 시스템 경로가 아니라 vault 상대 경로로 취급합니다.',
+			'노트 파일을 만들면 에이전트 결과 폴더 안에 저장하고, 응답에는 vault 상대 Markdown 링크를 포함하세요. 채팅에 초안만 작성했다면 파일을 저장했다고 말하지 마세요.',
 			obsidianSkill,
-			`Selected knowledge folders: ${scope}.`,
-			activeFile ? `Active note path: ${activeFile.path}.` : 'No active note is open.',
-			activeNoteContent ? `Active note content excerpt:\n${activeNoteContent}` : '',
-			`Total local context notes available in selected folders: ${contextNotes.stats.totalContextNotes}.`,
-			`Direct excerpts loaded into this prompt: ${contextNotes.stats.loadedExcerptNotes}.`,
-			'The excerpts below are a relevance-ranked working set, not the complete knowledge base. Do not describe the total knowledge base as only the excerpt count.',
-			'Use the loaded excerpts first, and use the vault workspace path plus selected knowledge folders when you need to inspect more notes.',
-			'Local note excerpts loaded for this request. Cite note paths when you use them:',
+			`선택된 지식 폴더: ${scope}.`,
+			activeFile ? `현재 열린 노트 경로: ${activeFile.path}.` : '현재 열린 노트가 없습니다.',
+			activeNoteContent ? `현재 노트 내용 발췌:\n${activeNoteContent}` : '',
+			`선택된 폴더에서 사용 가능한 로컬 문맥 노트 수: ${contextNotes.stats.totalContextNotes}.`,
+			`이번 프롬프트에 직접 포함된 발췌 노트 수: ${contextNotes.stats.loadedExcerptNotes}.`,
+			'아래 발췌는 관련도 기준 작업 세트이며 전체 지식 베이스가 아닙니다. 전체 지식 베이스를 발췌 개수만으로 설명하지 마세요.',
+			'먼저 포함된 발췌를 사용하고, 더 많은 노트 확인이 필요하면 vault 작업공간 경로와 선택된 지식 폴더를 활용하세요.',
+			'이번 요청에 포함된 로컬 노트 발췌입니다. 근거로 사용하면 노트 경로를 표시하세요:',
 			contextNotes.context,
 			webSearch
-				? 'Use web search when current external information would improve the answer, and return markdown with clear web and vault sources.'
-				: 'Do not use web search unless the user explicitly asks for it in the prompt. Prefer vault evidence.',
-			'Answer primarily from the local note context. If the answer is not supported by local notes, say so clearly.',
-			'Do not modify user notes directly unless the prompt explicitly asks for it. Prefer a preview-ready result.',
+				? '최신 외부 정보가 답변 품질을 높일 때 웹 검색을 사용하고, 웹 출처와 vault 출처를 명확히 구분한 Markdown으로 답하세요.'
+				: '사용자가 명시적으로 요청하지 않는 한 웹 검색을 사용하지 말고, vault 근거를 우선하세요.',
+			'가능하면 로컬 노트 문맥을 우선해 답하세요. 로컬 노트로 뒷받침되지 않으면 그 사실을 분명히 말하세요.',
+			'사용자가 명시적으로 요청하지 않는 한 사용자 노트를 직접 수정하지 말고, 먼저 검토 가능한 결과를 제시하세요.',
 			'',
-			'User request:',
+			'사용자 요청:',
 			prompt
 		].join('\n');
 	}
@@ -205,16 +209,16 @@ export class AgentService {
 		const file = this.plugin.app.vault.getAbstractFileByPath(path);
 		if (!(file instanceof TFile)) {
 			return [
-				'Obsidian writing skill is enabled, but the skill file is not installed yet.',
-				'Default behavior: write valid Obsidian Markdown, save generated notes inside the Agent output folder, return vault-relative note links, and do not claim a save unless the file exists.'
+				'Obsidian 작성 스킬이 켜져 있지만 스킬 파일은 아직 설치되지 않았습니다.',
+				'기본 동작: 올바른 Obsidian Markdown을 작성하고, 생성 노트는 에이전트 결과 폴더에 저장하며, vault 상대 노트 링크를 반환하고, 실제 파일이 없으면 저장했다고 말하지 않습니다.'
 			].join('\n');
 		}
 		try {
 			const content = await this.plugin.app.vault.read(file);
 			return [
-				'Obsidian writing skill loaded. Follow it by default for note-writing tasks:',
+				'Obsidian 작성 스킬을 불러왔습니다. 노트 작성 작업에서는 기본적으로 이 지시를 따르세요:',
 				`--- ${path} ---`,
-				content.length > 5000 ? `${content.slice(0, 5000)}\n...[skill truncated]` : content
+				content.length > 5000 ? `${content.slice(0, 5000)}\n...[스킬 발췌 생략]` : content
 			].join('\n');
 		} catch {
 			return '';
@@ -232,7 +236,7 @@ export class AgentService {
 			try {
 				const content = await this.plugin.app.vault.read(file);
 				const truncated = content.length > 1800
-					? `${content.slice(0, 1800)}...[truncated]`
+					? `${content.slice(0, 1800)}...[발췌 생략]`
 					: content;
 				const block = `--- ${file.path} ---\n${truncated}\n`;
 				if (totalLength + block.length > maxTotalLength) {
@@ -242,7 +246,7 @@ export class AgentService {
 				contexts.push(block);
 				totalLength += block.length;
 			} catch (error) {
-				console.warn(`Failed to read local note for Agent context: ${file.path}`, error);
+				console.warn(`에이전트 문맥용 로컬 노트를 읽지 못했습니다: ${file.path}`, error);
 			}
 		}
 
@@ -257,7 +261,7 @@ export class AgentService {
 		};
 
 		return {
-			context: contexts.join('\n') || 'No local context notes are available in the selected context folders.',
+			context: contexts.join('\n') || '선택된 문맥 폴더에서 사용할 수 있는 로컬 문맥 노트가 없습니다.',
 			stats
 		};
 	}
@@ -321,10 +325,14 @@ export class AgentService {
 			let settled = false;
 			const maxBuffer = 1024 * 1024 * 8;
 			const timeoutMs = Math.max(30_000, this.plugin.settings.agentTimeoutSeconds * 1000);
+			const stdoutDecoder = new StringDecoder('utf8');
+			const stderrDecoder = new StringDecoder('utf8');
 			const child = spawn(command, args, {
 				cwd: this.plugin.getVaultPath(),
 				env: {
 					...process.env,
+					LANG: process.env.LANG || 'ko_KR.UTF-8',
+					LC_ALL: process.env.LC_ALL || process.env.LANG || 'ko_KR.UTF-8',
 					...this.parseEnv(this.plugin.settings.agentEnvironment)
 				},
 				shell: process.platform === 'win32' && /\.(cmd|bat)$/i.test(command),
@@ -338,9 +346,27 @@ export class AgentService {
 				stdinClosed: true
 			});
 
+			const recordChunk = (chunk: string, stream: 'stdout' | 'stderr') => {
+				if (!chunk) return;
+				if (stream === 'stdout') stdout += chunk;
+				else stderr += chunk;
+				onChunk?.(chunk, stream);
+				void this.appendAgentLog(logPath, { event: stream, chunk });
+				if (stdout.length + stderr.length > maxBuffer) {
+					void this.appendAgentLog(logPath, { event: 'max_buffer', maxBuffer });
+					child.kill();
+				}
+			};
+
+			const flushDecoders = () => {
+				recordChunk(stdoutDecoder.end(), 'stdout');
+				recordChunk(stderrDecoder.end(), 'stderr');
+			};
+
 			const timer = window.setTimeout(() => {
 				settled = true;
 				child.kill();
+				flushDecoders();
 				if (this.activeChild === child) this.activeChild = null;
 				void this.appendAgentLog(logPath, {
 					event: 'timeout',
@@ -348,7 +374,7 @@ export class AgentService {
 					stdoutLength: stdout.length,
 					stderrLength: stderr.length
 				});
-				reject(Object.assign(new Error(`Agent timed out after ${Math.round(timeoutMs / 1000)}s`), {
+				reject(Object.assign(new Error(`에이전트가 ${Math.round(timeoutMs / 1000)}초 안에 끝나지 않았습니다.`), {
 					code: 'ETIMEDOUT',
 					stdout,
 					stderr
@@ -356,30 +382,17 @@ export class AgentService {
 			}, timeoutMs);
 
 			child.stdout?.on('data', (data: Buffer) => {
-				const chunk = data.toString();
-				stdout += chunk;
-				onChunk?.(chunk, 'stdout');
-				void this.appendAgentLog(logPath, { event: 'stdout', chunk });
-				if (stdout.length + stderr.length > maxBuffer) {
-					void this.appendAgentLog(logPath, { event: 'max_buffer', maxBuffer });
-					child.kill();
-				}
+				recordChunk(stdoutDecoder.write(data), 'stdout');
 			});
 
 			child.stderr?.on('data', (data: Buffer) => {
-				const chunk = data.toString();
-				stderr += chunk;
-				onChunk?.(chunk, 'stderr');
-				void this.appendAgentLog(logPath, { event: 'stderr', chunk });
-				if (stdout.length + stderr.length > maxBuffer) {
-					void this.appendAgentLog(logPath, { event: 'max_buffer', maxBuffer });
-					child.kill();
-				}
+				recordChunk(stderrDecoder.write(data), 'stderr');
 			});
 
 			child.on('error', (error) => {
 				if (settled) return;
 				settled = true;
+				flushDecoders();
 				if (this.activeChild === child) this.activeChild = null;
 				window.clearTimeout(timer);
 				void this.appendAgentLog(logPath, {
@@ -390,7 +403,7 @@ export class AgentService {
 				});
 				if (this.stopWasRequested) {
 					this.stopWasRequested = false;
-					reject(Object.assign(new Error('Agent run stopped by user.'), {
+					reject(Object.assign(new Error('사용자가 에이전트 실행을 중지했습니다.'), {
 						code: 'EAGENTSTOPPED',
 						stdout,
 						stderr
@@ -403,6 +416,7 @@ export class AgentService {
 			child.on('close', (code) => {
 				if (settled) return;
 				settled = true;
+				flushDecoders();
 				if (this.activeChild === child) this.activeChild = null;
 				window.clearTimeout(timer);
 				void this.appendAgentLog(logPath, {
@@ -413,7 +427,7 @@ export class AgentService {
 				});
 				if (this.stopWasRequested) {
 					this.stopWasRequested = false;
-					reject(Object.assign(new Error('Agent run stopped by user.'), {
+					reject(Object.assign(new Error('사용자가 에이전트 실행을 중지했습니다.'), {
 						code: 'EAGENTSTOPPED',
 						stdout,
 						stderr
@@ -424,7 +438,7 @@ export class AgentService {
 					resolve({ stdout, stderr });
 					return;
 				}
-				reject(Object.assign(new Error(`Agent exited with code ${code ?? 'unknown'}`), {
+				reject(Object.assign(new Error(`에이전트가 종료 코드 ${code ?? '알 수 없음'}로 종료되었습니다.`), {
 					code,
 					stdout,
 					stderr
@@ -448,7 +462,7 @@ export class AgentService {
 			webSearchEnabled: this.plugin.settings.agentWebSearchEnabled,
 			syncFolders: this.plugin.settings.syncFolders,
 			contextStats: this.lastContextStats,
-			promptPreview: prompt.length > 500 ? `${prompt.slice(0, 500)}...[truncated]` : prompt,
+			promptPreview: prompt.length > 500 ? `${prompt.slice(0, 500)}...[발췌 생략]` : prompt,
 			agyLogPath: agyVaultPath
 		};
 
@@ -465,7 +479,7 @@ export class AgentService {
 				...event
 			})}\n`);
 		} catch (error) {
-			console.warn('Failed to append Agent log:', error);
+			console.warn('에이전트 로그를 추가하지 못했습니다:', error);
 		}
 	}
 
@@ -558,12 +572,12 @@ export class AgentService {
 
 	private getMissingCommandMessage(command: string): string {
 		return [
-			`Could not find the Agent CLI command "${command}".`,
-			'If Obsidian was opened from Finder, Dock, or Start Menu, it may not inherit your shell PATH.',
-			'Open Settings > Master of Knowledge > Agent Workspace and click Auto-detect, or set Antigravity CLI Path to the full command path.',
+			`에이전트 CLI 명령 "${command}"을 찾지 못했습니다.`,
+			'Obsidian을 Finder, Dock, 시작 메뉴에서 열었다면 셸 PATH를 상속하지 못할 수 있습니다.',
+			'설정 > 지식 마스터 AGY > 에이전트 실행에서 자동 찾기를 누르거나 Antigravity CLI 경로에 전체 경로를 입력하세요.',
 			process.platform === 'win32'
-				? 'On Windows it is often agy.exe in PATH, %LOCALAPPDATA%\\Programs\\Antigravity, or %APPDATA%\\npm.'
-				: `On macOS it is often: ${homedir()}/.local/bin/agy`
+				? 'Windows에서는 보통 PATH의 agy.exe, %LOCALAPPDATA%\\Programs\\Antigravity, 또는 %APPDATA%\\npm 위치에 있습니다.'
+				: `macOS에서는 보통 다음 위치 중 하나입니다: ${homedir()}/.local/bin/agy 또는 /opt/homebrew/bin/agy`
 		].join('\n');
 	}
 }

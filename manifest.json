@@ -1,9 +1,9 @@
 {
 	"id": "master-of-knowledge-agy",
-	"name": "Master of Knowledge AGY",
-	"version": "2.0.37",
+	"name": "지식 마스터 AGY",
+	"version": "2.0.38",
 	"minAppVersion": "1.0.0",
-	"description": "Run Antigravity CLI OAuth agent workflows over local Obsidian context folders.",
+	"description": "로컬 Obsidian 문맥 폴더를 기반으로 Antigravity CLI OAuth 에이전트 작업을 실행합니다.",
 	"author": "김문정",
 	"authorUrl": "https://github.com/reallygood83",
 	"isDesktopOnly": true

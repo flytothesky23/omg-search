@@ -9,7 +9,7 @@ export default class MokAgyPlugin extends Plugin {
 	statusBarItem: HTMLElement;
 
 	async onload() {
-		console.log('Loading Master of Knowledge AGY Plugin');
+		console.log('지식 마스터 AGY 플러그인을 불러옵니다.');
 
 		// Load settings
 		await this.loadSettings();
@@ -17,7 +17,7 @@ export default class MokAgyPlugin extends Plugin {
 		// Initialize services
 		this.agentService = new AgentService(this);
 		this.ensureDefaultWorkspaceFolders().catch(error => {
-			console.warn('Master of Knowledge AGY could not prepare default workspace folders:', error);
+			console.warn('지식 마스터 AGY 기본 작업공간 폴더를 준비하지 못했습니다:', error);
 		});
 
 		// Register chat view
@@ -27,7 +27,7 @@ export default class MokAgyPlugin extends Plugin {
 		);
 
 		// Add ribbon icon for chat
-		this.addRibbonIcon('brain', 'Open Master of Knowledge AGY', () => {
+		this.addRibbonIcon('brain', '지식 마스터 AGY 열기', () => {
 			this.activateChatView();
 		});
 
@@ -36,12 +36,12 @@ export default class MokAgyPlugin extends Plugin {
 
 		// Add status bar item
 		this.statusBarItem = this.addStatusBarItem();
-		this.updateStatusBar('Ready');
+		this.updateStatusBar('준비됨');
 
 		// Add command to open chat
 		this.addCommand({
 			id: 'open-master-of-knowledge-agy',
-			name: 'Open Master of Knowledge AGY',
+			name: '지식 마스터 AGY 열기',
 			callback: () => {
 				this.activateChatView();
 			}
@@ -52,7 +52,7 @@ export default class MokAgyPlugin extends Plugin {
 	}
 
 	onunload() {
-		console.log('Unloading Master of Knowledge AGY Plugin');
+		console.log('지식 마스터 AGY 플러그인을 종료합니다.');
 	}
 
 	async loadSettings() {
@@ -214,28 +214,29 @@ export default class MokAgyPlugin extends Plugin {
 		const folder = skillPath.split('/').slice(0, -1).join('/');
 		if (folder) await this.ensureVaultFolder(folder);
 
-		const content = [
-			'# Obsidian Writing Skill',
-			'',
-			'Use this skill whenever the user asks the Agent to write, compile, summarize, or create an Obsidian note.',
-			'',
-			'## Output Contract',
-			'- Write valid Markdown that opens cleanly in Obsidian.',
-			'- Prefer clear headings, short paragraphs, tables only when they improve scanning, and actionable checklists.',
-			'- Use wiki links like [[Note Title]] only when the target note exists or when creating a deliberate new note.',
-			'- Keep generated notes inside the configured Agent output folder.',
-			'- When a note file is created, return its vault-relative path and a markdown link to that path.',
-			'- Do not claim a file was saved unless the file was actually written.',
-			'',
-			'## Source Discipline',
-			'- Cite vault note paths when using local context note evidence.',
-			'- Separate note-grounded claims from general suggestions.',
-			'- If evidence is weak or missing, say so plainly.',
-			'',
-			'## Korean Notes',
-			'- If the user writes Korean, answer in natural Korean.',
-			'- Avoid stiff translation tone; write as a practical Obsidian note the user can keep.'
-		].join('\n');
+			const content = [
+				'# Obsidian 작성 스킬',
+				'',
+				'사용자가 에이전트에게 Obsidian 노트 작성, 정리, 요약, 생성을 요청할 때 이 스킬을 사용합니다.',
+				'',
+				'## 출력 규칙',
+				'- Obsidian에서 바로 열리는 올바른 Markdown을 작성합니다.',
+				'- 명확한 제목, 짧은 문단, 필요한 경우에만 표, 실행 가능한 체크리스트를 우선합니다.',
+				'- [[노트 제목]] 형태의 위키링크는 대상 노트가 존재하거나 새 노트를 의도적으로 만들 때만 사용합니다.',
+				'- 생성 노트는 설정된 에이전트 결과 폴더 안에 보관합니다.',
+				'- 노트 파일을 만들었다면 vault 상대 경로와 해당 경로의 Markdown 링크를 함께 반환합니다.',
+				'- 실제로 파일을 쓰지 않았다면 저장했다고 말하지 않습니다.',
+				'',
+				'## 출처 규칙',
+				'- 로컬 문맥 노트의 근거를 사용하면 vault 노트 경로를 표시합니다.',
+				'- 노트 근거가 있는 주장과 일반 제안을 구분합니다.',
+				'- 근거가 약하거나 없으면 분명히 말합니다.',
+				'',
+				'## 한국어 규칙',
+				'- 모든 설명, 제목, 버튼에 들어갈 제안 문구, 노트 본문은 자연스러운 한국어로 작성합니다.',
+				'- 명령어, 파일명, 모델명, API 이름 같은 고유명사를 제외하고 영어 문장을 섞지 않습니다.',
+				'- 번역투를 피하고 사용자가 그대로 보관할 수 있는 실무형 Obsidian 노트로 작성합니다.'
+			].join('\n');
 
 		const existing = this.app.vault.getAbstractFileByPath(skillPath);
 		if (existing instanceof TFile) {

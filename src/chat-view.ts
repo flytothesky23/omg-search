@@ -34,7 +34,7 @@ class NoteSelectorModal extends FuzzySuggestModal<TFile> {
 	constructor(app: App, onSelect: (file: TFile) => void) {
 		super(app);
 		this.onSelect = onSelect;
-		this.setPlaceholder('Select a note to apply content...');
+		this.setPlaceholder('내용을 반영할 노트를 선택하세요...');
 	}
 
 	getItems(): TFile[] {
@@ -79,7 +79,7 @@ export class ChatView extends ItemView {
 	}
 
 	getDisplayText(): string {
-		return 'Master of Knowledge';
+		return '지식 마스터 AGY';
 	}
 
 	getIcon(): string {
@@ -91,24 +91,21 @@ export class ChatView extends ItemView {
 		container.empty();
 		container.addClass('gemini-chat-container');
 
-		// Header
 		const header = container.createDiv({ cls: 'gemini-chat-header' });
-		header.createEl('h4', { text: 'Master of Knowledge AGY' });
+		header.createEl('h4', { text: '지식 마스터 AGY' });
 
 		const headerActions = header.createDiv({ cls: 'gemini-chat-header-actions' });
 
-		// Clear chat button
 		const clearBtn = headerActions.createEl('button', {
 			cls: 'gemini-chat-clear-btn',
-			text: '🗑️ Clear'
+			text: '🗑️ 지우기'
 		});
 		clearBtn.addEventListener('click', () => this.clearChat());
 
-		// Sync status indicator
 		const contextCount = this.plugin.getKnowledgeMarkdownFiles().length;
 		this.syncStatusEl = headerActions.createEl('span', {
 			cls: 'gemini-chat-sync-status',
-			text: `📚 ${contextCount} context notes`
+			text: `📚 문맥 노트 ${contextCount}개`
 		});
 
 		this.tabBarEl = container.createDiv({ cls: 'mok-tabs' });
@@ -125,29 +122,23 @@ export class ChatView extends ItemView {
 	updateSyncStatus() {
 		const contextCount = this.plugin.getKnowledgeMarkdownFiles().length;
 
-		// Update header sync status
 		if (this.syncStatusEl) {
-			this.syncStatusEl.textContent = `📚 ${contextCount} context notes`;
+			this.syncStatusEl.textContent = `📚 문맥 노트 ${contextCount}개`;
 		}
 
-		// Update welcome message warning
 		if (this.welcomeEl) {
-			// Remove existing warning if it exists
 			const existingWarning = this.welcomeEl.querySelector('.gemini-chat-welcome-warning');
 			if (existingWarning) {
 				existingWarning.remove();
 			}
 
-			// Add warning if no local context notes are selected.
 			if (contextCount === 0) {
-				// Find the position to insert warning (after the main description)
 				const paragraphs = this.welcomeEl.querySelectorAll('p');
 				if (paragraphs.length > 0) {
 					const warningEl = this.welcomeEl.createEl('p', {
 						cls: 'gemini-chat-welcome-warning',
-						text: '⚠️ No context notes selected yet. Choose context folders in settings to load note excerpts into Agent runs.'
+						text: '⚠️ 아직 문맥 노트가 선택되지 않았습니다. 설정에서 문맥 폴더를 선택하면 에이전트 실행 시 노트 발췌가 함께 전달됩니다.'
 					});
-					// Insert after first paragraph
 					paragraphs[0].after(warningEl);
 				}
 			}
@@ -157,10 +148,10 @@ export class ChatView extends ItemView {
 	private renderTabs() {
 		this.tabBarEl.empty();
 		const tabs: Array<{ id: DashboardTab; label: string }> = [
-			{ id: 'agent', label: 'Agent' },
-			{ id: 'workspace', label: '_omg' },
-			{ id: 'graph', label: 'Graph' },
-			{ id: 'settings', label: 'Settings' }
+			{ id: 'agent', label: '에이전트' },
+			{ id: 'workspace', label: '작업공간' },
+			{ id: 'graph', label: '관계도' },
+			{ id: 'settings', label: '설정' }
 		];
 
 		for (const tab of tabs) {
@@ -208,12 +199,12 @@ export class ChatView extends ItemView {
 		if (this.activeTab === 'agent') {
 			this.renderAgentModeBar(this.inputContainer);
 		}
-		this.inputEl = this.inputContainer.createEl('textarea', {
-			cls: 'gemini-chat-input',
-			placeholder: this.activeTab === 'agent'
-				? 'Ask the Agent to research, compile, map, or write...'
-				: 'Ask about your notes...'
-		});
+			this.inputEl = this.inputContainer.createEl('textarea', {
+				cls: 'gemini-chat-input',
+				placeholder: this.activeTab === 'agent'
+					? '조사, 정리, 관계도 작성, 노트 생성을 요청하세요...'
+					: '노트에 대해 질문하세요...'
+			});
 
 		this.inputEl.addEventListener('compositionstart', () => {
 			this.isComposing = true;
@@ -243,9 +234,9 @@ export class ChatView extends ItemView {
 			text: this.isLoading && this.loadingTab === this.activeTab
 				? (this.activeTab === 'agent' ? '■' : '⏳')
 				: '➤'
-		});
-		this.sendButton.disabled = this.isLoading && this.activeTab !== 'agent';
-		this.sendButton.setAttr('aria-label', this.isLoading && this.activeTab === 'agent' ? 'Stop Agent' : 'Send');
+			});
+			this.sendButton.disabled = this.isLoading && this.activeTab !== 'agent';
+			this.sendButton.setAttr('aria-label', this.isLoading && this.activeTab === 'agent' ? '에이전트 중지' : '보내기');
 		this.sendButton.addEventListener('click', () => {
 			if (this.isLoading && this.activeTab === 'agent') {
 				this.stopAgentRun();
@@ -257,40 +248,40 @@ export class ChatView extends ItemView {
 		if (this.isLoading && this.loadingTab === this.activeTab) {
 			const loadingEl = this.messagesContainer.createDiv({ cls: 'gemini-chat-loading' });
 			loadingEl.createEl('span', { cls: 'gemini-chat-loading-dots', text: '●●●' });
-			loadingEl.createEl('span', {
-				cls: 'gemini-chat-loading-label',
-				text: this.activeTab === 'agent' ? 'Agent is still running...' : 'Thinking...'
-			});
-		}
+				loadingEl.createEl('span', {
+					cls: 'gemini-chat-loading-label',
+					text: this.activeTab === 'agent' ? '에이전트가 아직 실행 중입니다...' : '생각 중입니다...'
+				});
+			}
 	}
 
 	private renderConversationToolbar() {
 		const toolbar = this.dashboardContentEl.createDiv({ cls: 'mok-conversation-toolbar' });
-		const title = toolbar.createDiv({ cls: 'mok-conversation-title' });
-		title.createEl('span', {
-			text: 'Agent conversation'
-		});
-		title.createEl('small', {
-			text: 'Start a fresh Agent run without clearing saved results.'
-		});
+			const title = toolbar.createDiv({ cls: 'mok-conversation-title' });
+			title.createEl('span', {
+				text: '에이전트 대화'
+			});
+			title.createEl('small', {
+				text: '저장된 결과는 유지한 채 새 에이전트 대화를 시작합니다.'
+			});
 
-		const newButton = toolbar.createEl('button', {
-			cls: 'mok-new-conversation-btn',
-			text: '+ New agent chat'
-		});
-		const isRunningHere = this.isLoading && this.loadingTab === this.activeTab;
-		newButton.disabled = isRunningHere;
-		newButton.setAttr('aria-label', 'Start new Agent chat');
-		if (isRunningHere) {
-			newButton.setAttr('title', 'Stop the current run before starting a new conversation.');
-		}
+			const newButton = toolbar.createEl('button', {
+				cls: 'mok-new-conversation-btn',
+				text: '+ 새 에이전트 대화'
+			});
+			const isRunningHere = this.isLoading && this.loadingTab === this.activeTab;
+			newButton.disabled = isRunningHere;
+			newButton.setAttr('aria-label', '새 에이전트 대화 시작');
+			if (isRunningHere) {
+				newButton.setAttr('title', '새 대화를 시작하려면 현재 실행을 먼저 중지하세요.');
+			}
 		newButton.addEventListener('click', () => this.startNewConversation());
 	}
 
 	private renderWorkspaceTab() {
 		const panel = this.dashboardContentEl.createDiv({ cls: 'mok-panel' });
-		panel.createEl('h3', { text: `${this.plugin.settings.workspaceFolder} workspace` });
-		panel.createEl('p', { text: 'Generated Agent reports, compiled notes, graph JSON, Canvas maps, reports, and logs are kept separate from your source notes.' });
+		panel.createEl('h3', { text: `${this.plugin.settings.workspaceFolder} 작업공간` });
+		panel.createEl('p', { text: '에이전트 보고서, 정리 노트, 관계도 JSON, 캔버스 지도, 로그는 원본 노트와 분리해 보관됩니다.' });
 		const folders = [
 			`${this.plugin.settings.workspaceFolder}/compiled`,
 			this.plugin.settings.agentOutputFolder,
@@ -301,33 +292,33 @@ export class ChatView extends ItemView {
 		const list = panel.createEl('ul');
 		for (const folder of folders) {
 			const exists = this.app.vault.getAbstractFileByPath(folder) ? 'ready' : 'missing';
-			list.createEl('li', { text: `${folder} (${exists})` });
+			list.createEl('li', { text: `${folder} (${exists === 'ready' ? '준비됨' : '없음'})` });
 		}
-		const createBtn = panel.createEl('button', { cls: 'gemini-chat-action-btn', text: 'Create workspace folders' });
+		const createBtn = panel.createEl('button', { cls: 'gemini-chat-action-btn', text: '작업공간 폴더 만들기' });
 		createBtn.addEventListener('click', async () => {
 			for (const folder of folders) await this.plugin.ensureVaultFolder(folder);
-			new Notice('Master of Knowledge AGY workspace folders are ready.');
+			new Notice('지식 마스터 AGY 작업공간 폴더가 준비되었습니다.');
 			this.renderActiveTab();
 		});
 
 		const graphBtn = panel.createEl('button', {
 			cls: 'gemini-chat-action-btn',
-			text: 'Build knowledge graph'
+			text: '지식 관계도 만들기'
 		});
 		graphBtn.addEventListener('click', async () => {
-			graphBtn.setText('Building graph...');
+			graphBtn.setText('관계도 생성 중...');
 			graphBtn.setAttr('disabled', 'true');
 			try {
 				const { jsonPath, canvasPath, reportPath, nodeCount, edgeCount, communityCount } = await this.buildKnowledgeGraphArtifacts();
-				new Notice(`Knowledge graph built: ${nodeCount} nodes, ${edgeCount} links, ${communityCount} communities`);
+				new Notice(`지식 관계도 생성 완료: 노드 ${nodeCount}개, 연결 ${edgeCount}개, 묶음 ${communityCount}개`);
 				await this.app.workspace.openLinkText(canvasPath || jsonPath, '', true);
 				void reportPath;
 			} catch (error) {
-				new Notice('Failed to build knowledge graph.');
-				console.error('Graph build error:', error);
+				new Notice('지식 관계도를 만들지 못했습니다.');
+				console.error('관계도 생성 오류:', error);
 			} finally {
 				graphBtn.removeAttribute('disabled');
-				graphBtn.setText('Build knowledge graph');
+				graphBtn.setText('지식 관계도 만들기');
 				this.renderActiveTab();
 			}
 		});
@@ -394,12 +385,12 @@ export class ChatView extends ItemView {
 			node.community = analytics.communities.get(node.id) || 0;
 		}
 
-		const graph = {
-			schemaVersion: 1,
-			generatedAt: new Date().toISOString(),
-			vault: this.plugin.getVaultPath(),
-			syncFolders: this.plugin.settings.syncFolders,
-			description: 'Graphify-lite vault graph built from local context Obsidian wikilinks and tags. Edges are deterministic EXTRACTED links, not LLM-inferred semantic relations.',
+			const graph = {
+				schemaVersion: 1,
+				generatedAt: new Date().toISOString(),
+				vault: this.plugin.getVaultPath(),
+				syncFolders: this.plugin.settings.syncFolders,
+				description: '로컬 문맥 노트의 Obsidian 위키링크와 태그에서 만든 경량 vault 관계도입니다. 연결은 LLM 추론이 아니라 명시 문법에서 추출한 항목입니다.',
 			metrics: {
 				nodes: allNodes.length,
 				noteNodes: nodes.length,
@@ -474,10 +465,10 @@ export class ChatView extends ItemView {
 				type: 'group',
 				x,
 				y,
-				width: groupWidth,
-				height: groupHeight,
-				color: this.communityCanvasColor(community),
-				label: `Community ${community + 1} · ${members.length} notes`
+					width: groupWidth,
+					height: groupHeight,
+					color: this.communityCanvasColor(community),
+					label: `묶음 ${community + 1} · 노트 ${members.length}개`
 			});
 
 			const [hub, ...rest] = shown;
@@ -525,11 +516,11 @@ export class ChatView extends ItemView {
 				type: 'group',
 				x: tagX,
 				y: 0,
-				width: 760,
-				height: Math.max(520, tagNodes.length * 150 + 180),
-				color: '6',
-				label: 'Tag Bridges'
-			});
+					width: 760,
+					height: Math.max(520, tagNodes.length * 150 + 180),
+					color: '6',
+					label: '태그 연결'
+				});
 			tagNodes.forEach((node, index) => {
 				canvasNodes.push({
 					id: node.id,
@@ -537,10 +528,10 @@ export class ChatView extends ItemView {
 					x: tagX + 70,
 					y: 90 + index * 145,
 					width: 620,
-					height: 90,
-					color: this.communityCanvasColor(node.community || 5),
-					text: `${node.title}\n${node.degree || 0} linked notes`
-				});
+						height: 90,
+						color: this.communityCanvasColor(node.community || 5),
+						text: `${node.title}\n연결된 노트 ${node.degree || 0}개`
+					});
 			});
 			void maxHeight;
 		}
@@ -590,11 +581,11 @@ export class ChatView extends ItemView {
 			height: 180,
 			color: '6',
 			text: [
-				'Master of Knowledge Graph',
-				'Community groups are ranked by PageRank and degree. Large cards are local hubs. Tag Bridges show cross-cutting tags.',
-				'This canvas intentionally shows the most meaningful nodes, not every context note.'
-			].join('\n')
-		});
+					'지식 관계도',
+					'묶음은 PageRank와 연결 수 기준으로 정렬됩니다. 큰 카드는 로컬 허브 노트이고, 태그 연결은 여러 주제를 가로지르는 태그를 보여줍니다.',
+					'이 캔버스는 모든 문맥 노트가 아니라 관계가 뚜렷한 주요 노드를 선별해 보여줍니다.'
+				].join('\n')
+			});
 		return { nodes: canvasNodes, edges: canvasEdges };
 	}
 
@@ -741,54 +732,54 @@ export class ChatView extends ItemView {
 		const communityLines = Array.from(communities.entries())
 			.sort((a, b) => b[1].length - a[1].length)
 			.slice(0, 12)
-			.map(([community, members]) => {
-				const examples = members
-					.sort((a, b) => (b.pageRank || 0) - (a.pageRank || 0))
-					.slice(0, 5)
-					.map(node => node.title)
-					.join(', ');
-				return `- Community ${community}: ${members.length} nodes — ${examples}`;
+				.map(([community, members]) => {
+					const examples = members
+						.sort((a, b) => (b.pageRank || 0) - (a.pageRank || 0))
+						.slice(0, 5)
+						.map(node => node.title)
+						.join(', ');
+					return `- 묶음 ${community}: 노드 ${members.length}개 - ${examples}`;
+				});
+			const hubLines = hubs.map(node => {
+				const rank = ((node.pageRank || 0) * 100).toFixed(1);
+				return `- ${node.title} - PageRank ${rank}, 연결 수 ${node.degree || 0}, 묶음 ${node.community || 0}`;
 			});
-		const hubLines = hubs.map(node => {
-			const rank = ((node.pageRank || 0) * 100).toFixed(1);
-			return `- ${node.title} — PageRank ${rank}, degree ${node.degree || 0}, community ${node.community || 0}`;
-		});
-		return [
-			'# Master of Knowledge Graph Report',
-			'',
-			`Generated: ${new Date().toISOString()}`,
-			'',
-			'## Scope',
-			'',
-			`- Notes: ${notes.length}`,
-			`- Tags: ${tags.length}`,
-			`- Edges: ${edges.length}`,
-			`- Communities: ${communityCount}`,
-			'',
-			'## Method',
-			'',
-			'- Source corpus: only notes selected by Agent Context Folders.',
-			'- Edges: Obsidian wikilinks and tags only.',
-			'- Confidence: all edges are marked EXTRACTED because they come from explicit note syntax.',
-			'- Analytics: lightweight PageRank and Label Propagation community detection inspired by Alda graphify.',
-			'',
-			'## Hub Nodes',
-			'',
-			hubLines.length ? hubLines.join('\n') : '- No connected hubs yet. Add wikilinks or tags between context notes.',
-			'',
-			'## Communities',
-			'',
-			communityLines.length ? communityLines.join('\n') : '- No communities detected yet.',
-			'',
-			'## Honest Limits',
-			'',
-			'- This is graphify-lite, not a full semantic entity graph yet.',
-			'- It does not extract entities/concepts with an LLM.',
-			'- It does not create INFERRED or AMBIGUOUS semantic edges.',
-			'- It does not yet include a Cytoscape-style interactive dashboard.',
-			''
-		].join('\n');
-	}
+			return [
+				'# 지식 관계도 보고서',
+				'',
+				`생성 시각: ${new Date().toISOString()}`,
+				'',
+				'## 범위',
+				'',
+				`- 노트: ${notes.length}`,
+				`- 태그: ${tags.length}`,
+				`- 연결: ${edges.length}`,
+				`- 묶음: ${communityCount}`,
+				'',
+				'## 방법',
+				'',
+				'- 원본 범위: 에이전트 문맥 폴더로 선택한 노트만 사용합니다.',
+				'- 연결 기준: Obsidian 위키링크와 태그만 사용합니다.',
+				'- 신뢰도: 모든 연결은 노트 문법에서 직접 추출된 항목입니다.',
+				'- 분석 방식: Alda graphify 스타일의 경량 PageRank와 Label Propagation 묶음 탐지를 사용합니다.',
+				'',
+				'## 허브 노드',
+				'',
+				hubLines.length ? hubLines.join('\n') : '- 아직 연결된 허브가 없습니다. 문맥 노트 사이에 위키링크나 태그를 추가하세요.',
+				'',
+				'## 묶음',
+				'',
+				communityLines.length ? communityLines.join('\n') : '- 아직 묶음이 탐지되지 않았습니다.',
+				'',
+				'## 현재 한계',
+				'',
+				'- 현재 관계도는 경량 graphify 방식이며, 완전한 의미 기반 엔티티 그래프는 아닙니다.',
+				'- LLM으로 엔티티나 개념을 추출하지 않습니다.',
+				'- 추론형 또는 모호한 의미 연결은 만들지 않습니다.',
+				'- Cytoscape 수준의 별도 대시보드는 아직 포함하지 않습니다.',
+				''
+			].join('\n');
+		}
 
 	private communityCanvasColor(community: number): string {
 		const colors = ['1', '2', '3', '4', '5', '6'];
@@ -798,12 +789,12 @@ export class ChatView extends ItemView {
 	private async renderGraphTab() {
 		const panel = this.dashboardContentEl.createDiv({ cls: 'mok-panel mok-graph-panel' });
 		const header = panel.createDiv({ cls: 'mok-graph-header' });
-		header.createEl('h3', { text: 'Knowledge Graph' });
-		header.createEl('p', { text: 'Alda-style overview of local context notes: PageRank size, community color, 1-hop hover, and click-to-inspect.' });
+		header.createEl('h3', { text: '지식 관계도' });
+		header.createEl('p', { text: '로컬 문맥 노트를 PageRank 크기, 묶음 색상, 1단계 연결 강조, 클릭 상세 보기로 탐색합니다.' });
 
 		const controls = panel.createDiv({ cls: 'mok-graph-controls' });
 		const maxLabel = controls.createEl('label', { cls: 'mok-graph-control-label' });
-		maxLabel.createSpan({ text: 'Top nodes' });
+		maxLabel.createSpan({ text: '상위 노드' });
 		const maxInput = maxLabel.createEl('input', { type: 'range' });
 		maxInput.min = '80';
 		maxInput.max = '300';
@@ -814,64 +805,64 @@ export class ChatView extends ItemView {
 		const hideLabel = controls.createEl('label', { cls: 'mok-graph-check-label' });
 		const hideInput = hideLabel.createEl('input', { type: 'checkbox' });
 		hideInput.checked = true;
-		hideLabel.createSpan({ text: 'Hide isolated' });
+		hideLabel.createSpan({ text: '고립 노드 숨김' });
 
 		const tagLabel = controls.createEl('label', { cls: 'mok-graph-check-label' });
 		const tagInput = tagLabel.createEl('input', { type: 'checkbox' });
 		tagInput.checked = false;
-		tagLabel.createSpan({ text: 'Include tags' });
+		tagLabel.createSpan({ text: '태그 포함' });
 
 		const searchInput = controls.createEl('input', {
-			cls: 'mok-graph-search',
-			type: 'search',
-			placeholder: 'Search nodes...'
-		});
+				cls: 'mok-graph-search',
+				type: 'search',
+				placeholder: '노드 검색...'
+			});
 
-		const rebuildBtn = controls.createEl('button', {
-			cls: 'gemini-chat-action-btn',
-			text: 'Rebuild graph'
-		});
+			const rebuildBtn = controls.createEl('button', {
+				cls: 'gemini-chat-action-btn',
+				text: '관계도 다시 만들기'
+			});
 
 		const zoomOutBtn = controls.createEl('button', {
 			cls: 'gemini-chat-action-btn',
 			text: '-'
 		});
-		zoomOutBtn.setAttr('aria-label', 'Zoom out graph');
+			zoomOutBtn.setAttr('aria-label', '관계도 축소');
 
 		const zoomInBtn = controls.createEl('button', {
 			cls: 'gemini-chat-action-btn',
 			text: '+'
 		});
-		zoomInBtn.setAttr('aria-label', 'Zoom in graph');
+			zoomInBtn.setAttr('aria-label', '관계도 확대');
 
-		const fitBtn = controls.createEl('button', {
-			cls: 'gemini-chat-action-btn',
-			text: 'Fit'
-		});
+			const fitBtn = controls.createEl('button', {
+				cls: 'gemini-chat-action-btn',
+				text: '맞춤'
+			});
 
-		const relayoutBtn = controls.createEl('button', {
-			cls: 'gemini-chat-action-btn',
-			text: 'Relayout'
-		});
+			const relayoutBtn = controls.createEl('button', {
+				cls: 'gemini-chat-action-btn',
+				text: '재배치'
+			});
 
-		const resetBtn = controls.createEl('button', {
-			cls: 'gemini-chat-action-btn',
-			text: 'Reset'
-		});
+			const resetBtn = controls.createEl('button', {
+				cls: 'gemini-chat-action-btn',
+				text: '초기화'
+			});
 
 		const statsEl = panel.createDiv({ cls: 'mok-graph-stats' });
 		const graphWrap = panel.createDiv({ cls: 'mok-graph-wrap' });
 		const detailPanel = graphWrap.createDiv({ cls: 'mok-graph-detail mok-graph-detail-hidden' });
 
-		let graph = await this.loadKnowledgeGraph();
-		if (!graph) {
-			statsEl.setText('No graph yet. Build one from your context notes.');
-			const empty = graphWrap.createDiv({ cls: 'mok-graph-empty' });
-			empty.createEl('div', { text: 'No graph artifact found.' });
-			empty.createEl('button', {
-				cls: 'gemini-chat-action-btn',
-				text: 'Build knowledge graph'
-			}).addEventListener('click', async () => {
+			let graph = await this.loadKnowledgeGraph();
+			if (!graph) {
+				statsEl.setText('아직 관계도가 없습니다. 문맥 노트에서 관계도를 만들어 주세요.');
+				const empty = graphWrap.createDiv({ cls: 'mok-graph-empty' });
+				empty.createEl('div', { text: '관계도 산출물을 찾지 못했습니다.' });
+				empty.createEl('button', {
+					cls: 'gemini-chat-action-btn',
+					text: '지식 관계도 만들기'
+				}).addEventListener('click', async () => {
 				await this.buildKnowledgeGraphArtifacts();
 				this.renderActiveTab();
 			});
@@ -905,22 +896,22 @@ export class ChatView extends ItemView {
 			searchInput.value = '';
 			redraw();
 		});
-		rebuildBtn.addEventListener('click', async () => {
-			rebuildBtn.setText('Building...');
-			rebuildBtn.setAttr('disabled', 'true');
-			try {
-				await this.buildKnowledgeGraphArtifacts();
-				currentGraph = await this.loadKnowledgeGraph();
-				if (currentGraph) redraw();
-				new Notice('Knowledge graph rebuilt.');
-			} catch (error) {
-				new Notice('Failed to rebuild graph.');
-				console.error('Graph rebuild error:', error);
-			} finally {
-				rebuildBtn.removeAttribute('disabled');
-				rebuildBtn.setText('Rebuild graph');
-			}
-		});
+			rebuildBtn.addEventListener('click', async () => {
+				rebuildBtn.setText('생성 중...');
+				rebuildBtn.setAttr('disabled', 'true');
+				try {
+					await this.buildKnowledgeGraphArtifacts();
+					currentGraph = await this.loadKnowledgeGraph();
+					if (currentGraph) redraw();
+					new Notice('지식 관계도를 다시 만들었습니다.');
+				} catch (error) {
+					new Notice('관계도를 다시 만들지 못했습니다.');
+					console.error('관계도 재생성 오류:', error);
+				} finally {
+					rebuildBtn.removeAttribute('disabled');
+					rebuildBtn.setText('관계도 다시 만들기');
+				}
+			});
 
 		redraw();
 	}
@@ -935,7 +926,7 @@ export class ChatView extends ItemView {
 			if (!Array.isArray(graph.nodes) || !Array.isArray(graph.edges)) return null;
 			return graph;
 		} catch (error) {
-			console.error('Failed to read knowledge graph:', error);
+			console.error('지식 관계도를 읽지 못했습니다:', error);
 			return null;
 		}
 	}
@@ -982,7 +973,7 @@ export class ChatView extends ItemView {
 		const searchHits = search
 			? selected.filter(node => (node.title || node.path).toLowerCase().includes(search)).length
 			: 0;
-		statsEl.setText(`${selected.length} nodes · ${edges.length}/${rawEdges.length} visible links · ${new Set(selected.map(node => node.community || 0)).size} communities${search ? ` · ${searchHits} search hits` : ''}`);
+			statsEl.setText(`노드 ${selected.length}개 · 표시 연결 ${edges.length}/${rawEdges.length}개 · 묶음 ${new Set(selected.map(node => node.community || 0)).size}개${search ? ` · 검색 결과 ${searchHits}개` : ''}`);
 
 		const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
 		svg.setAttribute('viewBox', `0 0 ${layout.width} ${layout.height}`);
@@ -1045,7 +1036,7 @@ export class ChatView extends ItemView {
 			}
 
 			const tooltip = document.createElementNS('http://www.w3.org/2000/svg', 'title');
-			tooltip.textContent = `${title}\n${node.path}\nDegree ${node.degree || 0} · PageRank ${Math.round((node.pageRank || 0) * 100)}`;
+			tooltip.textContent = `${title}\n${node.path}\n연결 수 ${node.degree || 0} · PageRank ${Math.round((node.pageRank || 0) * 100)}`;
 			group.appendChild(tooltip);
 
 			group.addEventListener('mouseenter', () => {
@@ -1195,16 +1186,16 @@ export class ChatView extends ItemView {
 		panel.empty();
 		panel.removeClass('mok-graph-detail-hidden');
 		const close = panel.createEl('button', { cls: 'mok-graph-detail-close', text: 'x' });
-		close.setAttr('aria-label', 'Close graph detail');
+		close.setAttr('aria-label', '관계도 상세 닫기');
 		close.addEventListener('click', () => panel.addClass('mok-graph-detail-hidden'));
-		panel.createEl('div', {
-			cls: 'mok-graph-detail-kind',
-			text: node.kind === 'tag' ? 'tag bridge' : 'context note'
-		});
+			panel.createEl('div', {
+				cls: 'mok-graph-detail-kind',
+				text: node.kind === 'tag' ? '태그 연결' : '문맥 노트'
+			});
 		panel.createEl('h4', { text: node.title || node.path });
-		panel.createEl('p', {
-			text: `${node.path} · degree ${node.degree || 0} · visible neighbors ${visibleNeighborIds.length} · PageRank ${Math.round((node.pageRank || 0) * 100)}`
-		});
+			panel.createEl('p', {
+				text: `${node.path} · 연결 수 ${node.degree || 0} · 표시된 이웃 ${visibleNeighborIds.length}개 · PageRank ${Math.round((node.pageRank || 0) * 100)}`
+			});
 		if (node.kind === 'note') {
 			const file = this.app.vault.getAbstractFileByPath(node.path);
 			if (file instanceof TFile) {
@@ -1215,7 +1206,7 @@ export class ChatView extends ItemView {
 					.slice(0, 360);
 				if (preview) panel.createEl('p', { cls: 'mok-graph-detail-preview', text: preview });
 				const actions = panel.createDiv({ cls: 'mok-graph-detail-actions' });
-				const openBtn = actions.createEl('button', { cls: 'gemini-chat-action-btn', text: 'Open note' });
+					const openBtn = actions.createEl('button', { cls: 'gemini-chat-action-btn', text: '노트 열기' });
 				openBtn.addEventListener('click', async () => {
 					await this.app.workspace.getLeaf(true).openFile(file);
 				});
@@ -1226,9 +1217,9 @@ export class ChatView extends ItemView {
 			.filter((neighbor): neighbor is KnowledgeGraphNode => !!neighbor)
 			.sort((a, b) => (b.pageRank || 0) - (a.pageRank || 0))
 			.slice(0, 10);
-		if (neighbors.length > 0) {
-			const relationWrap = panel.createDiv({ cls: 'mok-graph-detail-relations' });
-			relationWrap.createEl('strong', { text: 'Visible connections' });
+			if (neighbors.length > 0) {
+				const relationWrap = panel.createDiv({ cls: 'mok-graph-detail-relations' });
+				relationWrap.createEl('strong', { text: '표시된 연결' });
 			for (const neighbor of neighbors) {
 				const item = relationWrap.createEl('button', {
 					cls: 'mok-graph-relation-btn',
@@ -1439,11 +1430,11 @@ export class ChatView extends ItemView {
 
 	private renderSettingsTab() {
 		const panel = this.dashboardContentEl.createDiv({ cls: 'mok-panel' });
-		panel.createEl('h3', { text: 'Settings' });
-		panel.createEl('p', { text: 'Open plugin settings to change context folders, Agent CLI path, Agent output folder, and local workspace options.' });
+		panel.createEl('h3', { text: '설정' });
+		panel.createEl('p', { text: '문맥 폴더, 에이전트 CLI 경로, 에이전트 결과 폴더, 로컬 작업공간 옵션을 변경합니다.' });
 		const openBtn = panel.createEl('button', {
 			cls: 'gemini-chat-action-btn',
-			text: 'Open Master of Knowledge settings'
+			text: '지식 마스터 설정 열기'
 		});
 		openBtn.addEventListener('click', () => this.plugin.openPluginSettings());
 	}
@@ -1451,40 +1442,40 @@ export class ChatView extends ItemView {
 	private showWelcomeMessage() {
 		this.welcomeEl = this.messagesContainer.createDiv({ cls: 'gemini-chat-welcome' });
 		this.welcomeEl.createEl('div', { cls: 'gemini-chat-welcome-icon', text: '🧭' });
-		this.welcomeEl.createEl('h3', { text: 'Agent Workspace' });
-		this.welcomeEl.createEl('p', { text: 'Run Antigravity/AGY work from Obsidian using your local CLI OAuth session, then apply the result to notes.' });
+		this.welcomeEl.createEl('h3', { text: '에이전트 작업공간' });
+		this.welcomeEl.createEl('p', { text: '로컬 CLI OAuth 세션으로 Obsidian 안에서 Antigravity/AGY 작업을 실행하고, 결과를 노트에 반영합니다.' });
 
 		const contextCount = this.plugin.getKnowledgeMarkdownFiles().length;
 		if (contextCount === 0) {
-			this.welcomeEl.createEl('p', {
-				cls: 'gemini-chat-welcome-warning',
-				text: '⚠️ No context notes selected yet. Choose context folders in settings to load note excerpts into Agent runs.'
-			});
-		}
+				this.welcomeEl.createEl('p', {
+					cls: 'gemini-chat-welcome-warning',
+					text: '⚠️ 아직 문맥 노트가 선택되지 않았습니다. 설정에서 문맥 폴더를 선택하면 에이전트 실행 시 노트 발췌가 함께 전달됩니다.'
+				});
+			}
 
 		return;
 	}
 
 	private renderAgentModeBar(container: HTMLElement) {
 		const modeBar = container.createDiv({ cls: 'mok-agent-mode-bar' });
-		const webSearchButton = modeBar.createEl('button', {
-			cls: this.plugin.settings.agentWebSearchEnabled
-				? 'mok-agent-mode-toggle mok-agent-mode-toggle-active'
-				: 'mok-agent-mode-toggle',
-			text: this.plugin.settings.agentWebSearchEnabled ? 'Web Search On' : 'Web Search Off'
-		});
+			const webSearchButton = modeBar.createEl('button', {
+				cls: this.plugin.settings.agentWebSearchEnabled
+					? 'mok-agent-mode-toggle mok-agent-mode-toggle-active'
+					: 'mok-agent-mode-toggle',
+				text: this.plugin.settings.agentWebSearchEnabled ? '웹 검색 켜짐' : '웹 검색 꺼짐'
+			});
 		webSearchButton.setAttr('aria-pressed', String(this.plugin.settings.agentWebSearchEnabled));
 		webSearchButton.addEventListener('click', async () => {
 			this.plugin.settings.agentWebSearchEnabled = !this.plugin.settings.agentWebSearchEnabled;
 			await this.plugin.saveSettings();
 			this.renderActiveTab();
 		});
-		modeBar.createSpan({
-			cls: 'mok-agent-mode-hint',
-			text: this.plugin.settings.agentWebSearchEnabled
-				? 'Agent may use current web sources.'
-				: 'Agent stays focused on vault context unless asked.'
-		});
+			modeBar.createSpan({
+				cls: 'mok-agent-mode-hint',
+				text: this.plugin.settings.agentWebSearchEnabled
+					? '필요하면 최신 웹 자료를 사용할 수 있습니다.'
+					: '요청이 없으면 vault 문맥에 집중합니다.'
+			});
 	}
 
 	private async sendMessage() {
@@ -1495,10 +1486,10 @@ export class ChatView extends ItemView {
 		const requestInput = this.inputEl;
 		const requestButton = this.sendButton;
 
-		if (requestTab !== 'agent') {
-			new Notice('Chat is disabled in this AGY-only fork. Use the Agent tab.');
-			return;
-		}
+			if (requestTab !== 'agent') {
+				new Notice('이 AGY 전용 fork에서는 일반 채팅을 사용하지 않습니다. 에이전트 탭을 사용하세요.');
+				return;
+			}
 
 		// Clear welcome message
 		const welcomeEl = this.messagesContainer.querySelector('.gemini-chat-welcome');
@@ -1522,23 +1513,23 @@ export class ChatView extends ItemView {
 		// Show loading
 		this.isLoading = true;
 		this.loadingTab = requestTab;
-		requestButton.disabled = requestTab !== 'agent';
-		requestButton.textContent = requestTab === 'agent' ? '■' : '⏳';
-		requestButton.setAttr('aria-label', requestTab === 'agent' ? 'Stop Agent' : 'Running');
+			requestButton.disabled = requestTab !== 'agent';
+			requestButton.textContent = requestTab === 'agent' ? '■' : '⏳';
+			requestButton.setAttr('aria-label', requestTab === 'agent' ? '에이전트 중지' : '실행 중');
 
 		const loadingEl = requestContainer.createDiv({ cls: 'gemini-chat-loading' });
 		loadingEl.createEl('span', { cls: 'gemini-chat-loading-dots', text: '●●●' });
-		const loadingLabel = loadingEl.createEl('span', {
-			cls: 'gemini-chat-loading-label',
-			text: requestTab === 'agent' ? 'Agent running 0s...' : 'Thinking...'
-		});
+			const loadingLabel = loadingEl.createEl('span', {
+				cls: 'gemini-chat-loading-label',
+				text: requestTab === 'agent' ? '에이전트 실행 중 0초...' : '생각 중입니다...'
+			});
 		const startedAt = Date.now();
 		const loadingTimer = requestTab === 'agent'
-			? window.setInterval(() => {
-				const seconds = Math.floor((Date.now() - startedAt) / 1000);
-				loadingLabel.setText(`Agent running ${seconds}s...`);
-			}, 1000)
-			: null;
+				? window.setInterval(() => {
+					const seconds = Math.floor((Date.now() - startedAt) / 1000);
+					loadingLabel.setText(`에이전트 실행 중 ${seconds}초...`);
+				}, 1000)
+				: null;
 
 		// Scroll to bottom
 		this.scrollToBottom();
@@ -1547,20 +1538,20 @@ export class ChatView extends ItemView {
 		let streamedContent = '';
 		let lastStreamRender = 0;
 		if (requestTab === 'agent') {
-			streamingMessage = {
-				role: 'model',
-				content: 'Agent is starting...',
-				isStreaming: true
-			};
+				streamingMessage = {
+					role: 'model',
+					content: '에이전트를 시작하고 있습니다...',
+					isStreaming: true
+				};
 			list.push(streamingMessage);
 			if (this.activeTab === requestTab) this.renderActiveTab();
 		}
 
 		try {
 			const response = await this.runAgentMessage(text, (chunk, stream) => {
-				if (!streamingMessage || stream !== 'stdout') return;
-				streamedContent += chunk;
-				streamingMessage.content = streamedContent.trim() || 'Agent is running...';
+					if (!streamingMessage || stream !== 'stdout') return;
+					streamedContent += chunk;
+					streamingMessage.content = streamedContent.trim() || '에이전트가 실행 중입니다...';
 				const now = Date.now();
 				if (this.activeTab === requestTab && now - lastStreamRender > 350) {
 					lastStreamRender = now;
@@ -1575,11 +1566,11 @@ export class ChatView extends ItemView {
 			} else {
 				list.push(response);
 			}
-		} catch (error) {
-			const errorMessage: ChatMessage = {
-				role: 'model',
-				content: `Error: ${error instanceof Error ? error.message : 'Failed to get response'}`
-			};
+			} catch (error) {
+				const errorMessage: ChatMessage = {
+					role: 'model',
+					content: `오류: ${error instanceof Error ? error.message : '응답을 가져오지 못했습니다.'}`
+				};
 			if (streamingMessage) {
 				streamingMessage.content = errorMessage.content;
 				streamingMessage.isStreaming = false;
@@ -1600,7 +1591,7 @@ export class ChatView extends ItemView {
 
 	private stopAgentRun() {
 		const stopped = this.plugin.agentService.stop();
-		new Notice(stopped ? 'Agent run stopped.' : 'No active Agent run to stop.');
+		new Notice(stopped ? '에이전트 실행을 중지했습니다.' : '중지할 에이전트 실행이 없습니다.');
 	}
 
 	private async runAgentMessage(
@@ -1608,27 +1599,27 @@ export class ChatView extends ItemView {
 		onChunk?: (chunk: string, stream: 'stdout' | 'stderr') => void
 	): Promise<ChatMessage> {
 		const result = await this.plugin.agentService.run(text, onChunk);
-		const contextLine = result.contextStats
-			? [
-				`Knowledge context: ${result.contextStats.totalContextNotes} local context notes available; `,
-				`${result.contextStats.loadedExcerptNotes} relevant note excerpts loaded into this Agent run`,
-				result.contextStats.truncatedByBudget ? ' (trimmed to fit the Agent prompt).' : '.'
-			].join('')
-			: '';
+			const contextLine = result.contextStats
+				? [
+					`지식 문맥: 로컬 문맥 노트 ${result.contextStats.totalContextNotes}개 사용 가능; `,
+					`이번 실행에 관련 노트 발췌 ${result.contextStats.loadedExcerptNotes}개 포함`,
+					result.contextStats.truncatedByBudget ? ' (에이전트 프롬프트 한도에 맞춰 일부 생략됨).' : '.'
+				].join('')
+				: '';
 		const savedNotePath = this.extractVaultNotePath(result.content);
 		return {
 			role: 'model',
 			content: [
 				result.content,
 				'',
-				'---',
-				contextLine,
-				`Agent command: \`${result.command}\``,
-				`Duration: ${(result.durationMs / 1000).toFixed(1)}s`,
-				result.logPath ? `Agent log: [[${result.logPath}]]` : '',
-				result.agyLogPath ? `AGY log: [[${result.agyLogPath}]]` : '',
-				result.exitCode === 0 ? '' : `Exit code: ${result.exitCode ?? 'unknown'}`
-			].filter(Boolean).join('\n'),
+					'---',
+					contextLine,
+					`에이전트 명령: \`${result.command}\``,
+					`실행 시간: ${(result.durationMs / 1000).toFixed(1)}초`,
+					result.logPath ? `에이전트 로그: [[${result.logPath}]]` : '',
+					result.agyLogPath ? `AGY 로그: [[${result.agyLogPath}]]` : '',
+					result.exitCode === 0 ? '' : `종료 코드: ${result.exitCode ?? '알 수 없음'}`
+				].filter(Boolean).join('\n'),
 			savedNotePath: savedNotePath || undefined
 		};
 	}
@@ -1661,18 +1652,18 @@ export class ChatView extends ItemView {
 		this.processVaultFileLinks(contentEl);
 
 		// Render citations if present
-		if (message.citations && message.citations.length > 0) {
-			const citationsEl = contentWrapper.createDiv({ cls: 'gemini-chat-citations' });
-			citationsEl.createEl('div', { cls: 'gemini-chat-citations-label', text: '📎 Sources:' });
+			if (message.citations && message.citations.length > 0) {
+				const citationsEl = contentWrapper.createDiv({ cls: 'gemini-chat-citations' });
+				citationsEl.createEl('div', { cls: 'gemini-chat-citations-label', text: '📎 출처:' });
 
 			for (const citation of message.citations) {
 				this.renderCitationPreview(citationsEl, citation);
 			}
 		}
 
-		if (message.logPath) {
-			const logEl = contentWrapper.createDiv({ cls: 'gemini-chat-log-link' });
-			logEl.createEl('span', { text: 'Log: ' });
+			if (message.logPath) {
+				const logEl = contentWrapper.createDiv({ cls: 'gemini-chat-log-link' });
+				logEl.createEl('span', { text: '로그: ' });
 			const logLink = logEl.createEl('a', { text: message.logPath, href: '#' });
 			logLink.addEventListener('click', async (event) => {
 				event.preventDefault();
@@ -1680,9 +1671,9 @@ export class ChatView extends ItemView {
 			});
 		}
 
-		if (message.savedNotePath) {
-			const savedEl = contentWrapper.createDiv({ cls: 'gemini-chat-log-link' });
-			savedEl.createEl('span', { text: 'Saved note: ' });
+			if (message.savedNotePath) {
+				const savedEl = contentWrapper.createDiv({ cls: 'gemini-chat-log-link' });
+				savedEl.createEl('span', { text: '저장된 노트: ' });
 			const savedLink = savedEl.createEl('a', { text: message.savedNotePath, href: '#' });
 			savedLink.addEventListener('click', async (event) => {
 				event.preventDefault();
@@ -1776,9 +1767,9 @@ export class ChatView extends ItemView {
 				await this.app.workspace.openLinkText(vaultPath, '', true);
 			});
 			if (!link.nextElementSibling?.hasClass('gemini-chat-find-note-btn')) {
-				const findButton = document.createElement('button');
-				findButton.className = 'gemini-chat-find-note-btn';
-				findButton.textContent = 'Find note';
+					const findButton = document.createElement('button');
+					findButton.className = 'gemini-chat-find-note-btn';
+					findButton.textContent = '노트 찾기';
 				findButton.addEventListener('click', async (event) => {
 					event.preventDefault();
 					event.stopPropagation();
@@ -1901,7 +1892,7 @@ export class ChatView extends ItemView {
 			if (matchingFile) {
 				await this.app.workspace.openLinkText(matchingFile.path, '', true);
 			} else {
-				new Notice(`Note not found: ${path}`);
+				new Notice(`노트를 찾지 못했습니다: ${path}`);
 			}
 		}
 	}
@@ -1914,10 +1905,10 @@ export class ChatView extends ItemView {
 		row.createEl('div', { cls: 'gemini-chat-citation-title', text: title });
 
 		const actions = row.createDiv({ cls: 'gemini-chat-citation-actions' });
-		const openButton = actions.createEl('button', {
-			cls: 'gemini-chat-citation-open',
-			text: 'Find note'
-		});
+			const openButton = actions.createEl('button', {
+				cls: 'gemini-chat-citation-open',
+				text: '노트 찾기'
+			});
 		openButton.addEventListener('click', () => this.openNote(citation.sourcePath));
 
 		if (file) {
@@ -2052,7 +2043,7 @@ export class ChatView extends ItemView {
 
 	private startNewConversation() {
 		if (this.isLoading && this.loadingTab === this.activeTab) {
-			new Notice('Stop the current run before starting a new conversation.');
+			new Notice('새 대화를 시작하려면 현재 실행을 먼저 중지하세요.');
 			return;
 		}
 
@@ -2061,7 +2052,7 @@ export class ChatView extends ItemView {
 		}
 
 		this.agentMessages = [];
-		new Notice('Started a new Agent conversation.');
+		new Notice('새 에이전트 대화를 시작했습니다.');
 		this.renderActiveTab();
 	}
 
@@ -2072,10 +2063,10 @@ export class ChatView extends ItemView {
 		// Apply button with dropdown
 		const applyContainer = actionsEl.createDiv({ cls: 'gemini-chat-apply-container' });
 
-		const applyBtn = applyContainer.createEl('button', {
-			cls: 'gemini-chat-action-btn gemini-chat-apply-btn',
-			text: '📝 Apply'
-		});
+			const applyBtn = applyContainer.createEl('button', {
+				cls: 'gemini-chat-action-btn gemini-chat-apply-btn',
+				text: '📝 반영'
+			});
 
 		// Dropdown arrow
 		const dropdownArrow = applyContainer.createEl('button', {
@@ -2087,13 +2078,13 @@ export class ChatView extends ItemView {
 		const dropdownMenu = applyContainer.createDiv({ cls: 'gemini-chat-dropdown-menu' });
 		dropdownMenu.style.display = 'none';
 
-		const menuItems = [
-			{ text: '📍 Insert at Cursor', action: () => this.insertAtCursor(message.content, message.citations) },
-			{ text: '📎 Append to Current Note', action: () => this.appendToCurrentNote(message.content, message.citations) },
-			{ text: '📄 Create New Note', action: () => this.createNewNote(message) },
-			{ text: '📂 Select Note...', action: () => this.selectNoteToApply(message.content, message.citations) },
-			{ text: `🧠 Save to ${this.getWorkspaceSaveLabel()}`, action: () => this.saveToWorkspace(message) }
-		];
+			const menuItems = [
+				{ text: '📍 커서 위치에 삽입', action: () => this.insertAtCursor(message.content, message.citations) },
+				{ text: '📎 현재 노트 끝에 추가', action: () => this.appendToCurrentNote(message.content, message.citations) },
+				{ text: '📄 새 노트 만들기', action: () => this.createNewNote(message) },
+				{ text: '📂 노트 선택...', action: () => this.selectNoteToApply(message.content, message.citations) },
+				{ text: `🧠 ${this.getWorkspaceSaveLabel()}에 저장`, action: () => this.saveToWorkspace(message) }
+			];
 
 		for (const item of menuItems) {
 			const menuItem = dropdownMenu.createEl('div', {
@@ -2143,18 +2134,18 @@ export class ChatView extends ItemView {
 		});
 
 		// Copy button
-		const copyBtn = actionsEl.createEl('button', {
-			cls: 'gemini-chat-action-btn gemini-chat-copy-btn',
-			text: '📋 Copy'
-		});
+			const copyBtn = actionsEl.createEl('button', {
+				cls: 'gemini-chat-action-btn gemini-chat-copy-btn',
+				text: '📋 복사'
+			});
 
-		copyBtn.addEventListener('click', async () => {
-			await navigator.clipboard.writeText(message.content);
-			copyBtn.textContent = '✓ Copied!';
-			setTimeout(() => {
-				copyBtn.textContent = '📋 Copy';
-			}, 2000);
-		});
+			copyBtn.addEventListener('click', async () => {
+				await navigator.clipboard.writeText(message.content);
+				copyBtn.textContent = '✓ 복사됨';
+				setTimeout(() => {
+					copyBtn.textContent = '📋 복사';
+				}, 2000);
+			});
 	}
 
 	// Format content with optional metadata
@@ -2172,11 +2163,11 @@ export class ChatView extends ItemView {
 			minute: '2-digit'
 		});
 
-		const label = 'Agent Result';
+		const label = '에이전트 결과';
 		let result = `\n\n---\n*🤖 ${label} (${dateStr})*\n\n${content}`;
 
 		if (citations && citations.length > 0) {
-			result += '\n\n**Sources:**\n';
+			result += '\n\n**출처:**\n';
 			for (const citation of citations) {
 				result += `- [[${citation.sourcePath}]]\n`;
 			}
@@ -2199,17 +2190,17 @@ export class ChatView extends ItemView {
 		const now = new Date();
 		const dateStr = now.toISOString().slice(0, 10);
 		const timeStr = now.toTimeString().slice(0, 5).replace(':', '-');
-		const fileName = `${folder}/Master of Knowledge ${dateStr} ${timeStr}.md`;
+		const fileName = `${folder}/지식 마스터 ${dateStr} ${timeStr}.md`;
 		const formattedContent = this.formatContentWithMetadata(message.content, message.citations);
 		try {
 			const file = await this.app.vault.create(fileName, formattedContent);
 			message.savedNotePath = file.path;
 			await this.app.workspace.openLinkText(file.path, '', true);
-			new Notice(`✅ Saved to ${file.path}`);
+			new Notice(`✅ 저장했습니다: ${file.path}`);
 			this.renderActiveTab();
 		} catch (error) {
-			new Notice('Failed to save workspace note.');
-			console.error('Workspace save error:', error);
+			new Notice('작업공간 노트를 저장하지 못했습니다.');
+			console.error('작업공간 저장 오류:', error);
 		}
 	}
 
@@ -2220,39 +2211,39 @@ export class ChatView extends ItemView {
 		// Get the active markdown editor
 		const markdownView = this.app.workspace.getActiveFile();
 		if (!markdownView) {
-			new Notice('No active note. Please open a note first.');
+			new Notice('활성 노트가 없습니다. 먼저 노트를 열어 주세요.');
 			return;
 		}
 
 		const leaf = this.app.workspace.getMostRecentLeaf();
 		if (!leaf) {
-			new Notice('No active editor found.');
+			new Notice('활성 편집기를 찾지 못했습니다.');
 			return;
 		}
 
 		// @ts-ignore - accessing editor from view
 		const editor = leaf.view?.editor;
 		if (!editor) {
-			new Notice('No editor found. Please open a note in edit mode.');
+			new Notice('편집기를 찾지 못했습니다. 노트를 편집 모드로 열어 주세요.');
 			return;
 		}
 
 		const formattedContent = this.formatContentWithMetadata(content, citations);
 		editor.replaceSelection(formattedContent);
-		new Notice('✅ Content inserted at cursor!');
+		new Notice('✅ 커서 위치에 내용을 삽입했습니다.');
 	}
 
 	// Append to current note
 	private async appendToCurrentNote(content: string, citations?: Citation[]) {
 		const activeFile = this.app.workspace.getActiveFile();
 		if (!activeFile) {
-			new Notice('No active note. Please open a note first.');
+			new Notice('활성 노트가 없습니다. 먼저 노트를 열어 주세요.');
 			return;
 		}
 
 		const formattedContent = this.formatContentWithMetadata(content, citations);
 		await this.app.vault.append(activeFile, formattedContent);
-		new Notice(`✅ Content appended to ${activeFile.name}!`);
+		new Notice(`✅ ${activeFile.name}에 내용을 추가했습니다.`);
 	}
 
 	// Create new note with content
@@ -2263,7 +2254,7 @@ export class ChatView extends ItemView {
 		const folder = this.activeTab === 'agent'
 			? await this.plugin.ensureVaultFolder(this.plugin.settings.agentOutputFolder)
 			: '';
-		const baseName = 'Agent Result';
+		const baseName = '에이전트 결과';
 		const fileName = folder
 			? `${folder}/${baseName} ${dateStr} ${timeStr}.md`
 			: `${baseName} ${dateStr} ${timeStr}.md`;
@@ -2274,11 +2265,11 @@ export class ChatView extends ItemView {
 			const newFile = await this.app.vault.create(fileName, formattedContent);
 			message.savedNotePath = newFile.path;
 			await this.app.workspace.openLinkText(newFile.path, '', true);
-			new Notice(`✅ Created new note: ${newFile.path}`);
+			new Notice(`✅ 새 노트를 만들었습니다: ${newFile.path}`);
 			this.renderActiveTab();
 		} catch (error) {
-			new Notice('Failed to create note. Please try again.');
-			console.error('Create note error:', error);
+			new Notice('노트를 만들지 못했습니다. 다시 시도해 주세요.');
+			console.error('노트 생성 오류:', error);
 		}
 	}
 
@@ -2287,7 +2278,7 @@ export class ChatView extends ItemView {
 		const modal = new NoteSelectorModal(this.app, async (file: TFile) => {
 			const formattedContent = this.formatContentWithMetadata(content, citations);
 			await this.app.vault.append(file, formattedContent);
-			new Notice(`✅ Content appended to ${file.name}!`);
+			new Notice(`✅ ${file.name}에 내용을 추가했습니다.`);
 		});
 		modal.open();
 	}

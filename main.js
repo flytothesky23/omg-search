@@ -58,51 +58,51 @@ var MokAgySettingTab = class extends import_obsidian.PluginSettingTab {
   display() {
     const { containerEl } = this;
     containerEl.empty();
-    containerEl.createEl("h1", { text: "Master of Knowledge AGY Settings" });
-    containerEl.createEl("h2", { text: "Agent Context" });
+    containerEl.createEl("h1", { text: "\uC9C0\uC2DD \uB9C8\uC2A4\uD130 AGY \uC124\uC815" });
+    containerEl.createEl("h2", { text: "\uC5D0\uC774\uC804\uD2B8 \uBB38\uB9E5" });
     const folders = this.getAllFolders();
-    new import_obsidian.Setting(containerEl).setName("Context Folders").setDesc("Select folders the Agent should use as local vault context. Files stay local and are not synced to Google APIs.");
+    new import_obsidian.Setting(containerEl).setName("\uBB38\uB9E5 \uD3F4\uB354").setDesc("\uC5D0\uC774\uC804\uD2B8\uAC00 \uB85C\uCEEC vault \uBB38\uB9E5\uC73C\uB85C \uC0AC\uC6A9\uD560 \uD3F4\uB354\uB97C \uC120\uD0DD\uD569\uB2C8\uB2E4. \uD30C\uC77C\uC740 \uB85C\uCEEC\uC5D0\uB9CC \uB0A8\uACE0 Google API\uB85C \uB3D9\uAE30\uD654\uB418\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.");
     this.renderSyncFolderPicker(containerEl, folders);
-    containerEl.createEl("h2", { text: "Workspace" });
-    new import_obsidian.Setting(containerEl).setName("Workspace Folder").setDesc("Generated agent reports, compiled notes, graphs, and logs are saved under this vault folder.").addText(
+    containerEl.createEl("h2", { text: "\uC791\uC5C5\uACF5\uAC04" });
+    new import_obsidian.Setting(containerEl).setName("\uC791\uC5C5\uACF5\uAC04 \uD3F4\uB354").setDesc("\uC5D0\uC774\uC804\uD2B8 \uBCF4\uACE0\uC11C, \uC815\uB9AC \uB178\uD2B8, \uAD00\uACC4\uB3C4, \uB85C\uADF8\uAC00 \uC774 vault \uD3F4\uB354 \uC544\uB798\uC5D0 \uC800\uC7A5\uB429\uB2C8\uB2E4.").addText(
       (text) => text.setPlaceholder("_omg").setValue(this.plugin.settings.workspaceFolder).onChange(async (value) => {
         this.plugin.settings.workspaceFolder = this.plugin.normalizeFolder(value.trim() || "_omg", "_omg");
         await this.plugin.saveSettings();
       })
     );
-    new import_obsidian.Setting(containerEl).setName("Agent Output Folder").setDesc("Agent-generated notes are saved here when you use Create New Note or Save from the Agent tab.").addText(
+    new import_obsidian.Setting(containerEl).setName("\uC5D0\uC774\uC804\uD2B8 \uACB0\uACFC \uD3F4\uB354").setDesc("\uC5D0\uC774\uC804\uD2B8 \uD0ED\uC5D0\uC11C \uC0C8 \uB178\uD2B8 \uB9CC\uB4E4\uAE30 \uB610\uB294 \uC800\uC7A5\uC744 \uC0AC\uC6A9\uD560 \uB54C \uC0DD\uC131 \uB178\uD2B8\uAC00 \uC5EC\uAE30\uC5D0 \uC800\uC7A5\uB429\uB2C8\uB2E4.").addText(
       (text) => text.setPlaceholder("_omg/agent").setValue(this.plugin.settings.agentOutputFolder).onChange(async (value) => {
         this.plugin.settings.agentOutputFolder = this.plugin.normalizeFolder(value.trim() || "_omg/agent", "_omg/agent");
         await this.plugin.saveSettings();
       })
     ).addButton(
-      (button) => button.setButtonText("Create").onClick(async () => {
+      (button) => button.setButtonText("\uB9CC\uB4E4\uAE30").onClick(async () => {
         await this.plugin.ensureVaultFolder(this.plugin.settings.agentOutputFolder);
-        new import_obsidian.Notice(`Agent output folder is ready: ${this.plugin.settings.agentOutputFolder}`);
+        new import_obsidian.Notice(`\uC5D0\uC774\uC804\uD2B8 \uACB0\uACFC \uD3F4\uB354\uAC00 \uC900\uBE44\uB418\uC5C8\uC2B5\uB2C8\uB2E4: ${this.plugin.settings.agentOutputFolder}`);
       })
     );
-    containerEl.createEl("h2", { text: "Agent Workspace" });
-    new import_obsidian.Setting(containerEl).setName("Antigravity CLI Path").setDesc("Path or command used by the Agent tab. Use a full path if Obsidian cannot find agy from your shell PATH.").addText(
+    containerEl.createEl("h2", { text: "\uC5D0\uC774\uC804\uD2B8 \uC2E4\uD589" });
+    new import_obsidian.Setting(containerEl).setName("Antigravity CLI \uACBD\uB85C").setDesc("\uC5D0\uC774\uC804\uD2B8 \uD0ED\uC5D0\uC11C \uC0AC\uC6A9\uD560 \uBA85\uB839 \uB610\uB294 \uC804\uCCB4 \uACBD\uB85C\uC785\uB2C8\uB2E4. Obsidian\uC774 PATH\uC5D0\uC11C agy\uB97C \uCC3E\uC9C0 \uBABB\uD558\uBA74 \uC804\uCCB4 \uACBD\uB85C\uB97C \uC785\uB825\uD558\uC138\uC694.").addText(
       (text) => text.setPlaceholder(process.platform === "win32" ? "agy.exe" : "/Users/you/.local/bin/agy").setValue(this.plugin.settings.agentCliPath).onChange(async (value) => {
         this.plugin.settings.agentCliPath = value.trim() || "agy";
         await this.plugin.saveSettings();
       })
     );
-    new import_obsidian.Setting(containerEl).setName("Find Antigravity CLI").setDesc("Auto-detect agy from PATH and common macOS/Windows install locations.").addButton(
-      (button) => button.setButtonText("Auto-detect").onClick(async () => {
+    new import_obsidian.Setting(containerEl).setName("Antigravity CLI \uCC3E\uAE30").setDesc("PATH\uC640 macOS/Windows\uC758 \uC77C\uBC18 \uC124\uCE58 \uC704\uCE58\uC5D0\uC11C agy\uB97C \uC790\uB3D9\uC73C\uB85C \uCC3E\uC2B5\uB2C8\uB2E4.").addButton(
+      (button) => button.setButtonText("\uC790\uB3D9 \uCC3E\uAE30").onClick(async () => {
         const found = this.plugin.agentService.detectAgentCliPath();
         if (!found) {
-          new import_obsidian.Notice("Could not find agy. Install Antigravity CLI or set the full path manually.");
+          new import_obsidian.Notice("agy\uB97C \uCC3E\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. Antigravity CLI\uB97C \uC124\uCE58\uD558\uAC70\uB098 \uC804\uCCB4 \uACBD\uB85C\uB97C \uC9C1\uC811 \uC785\uB825\uD558\uC138\uC694.");
           return;
         }
         this.plugin.settings.agentCliPath = found;
         await this.plugin.saveSettings();
-        new import_obsidian.Notice(`Antigravity CLI found: ${found}`);
+        new import_obsidian.Notice(`Antigravity CLI\uB97C \uCC3E\uC558\uC2B5\uB2C8\uB2E4: ${found}`);
         this.display();
       })
     );
-    new import_obsidian.Setting(containerEl).setName("AGY Model").setDesc("Model passed to agy with --model. Leave Auto to use the AGY default.").addDropdown((dropdown) => {
-      dropdown.addOption("", "Auto / AGY default");
+    new import_obsidian.Setting(containerEl).setName("AGY \uBAA8\uB378").setDesc("agy \uC2E4\uD589 \uC2DC --model\uB85C \uC804\uB2EC\uD560 \uBAA8\uB378\uC785\uB2C8\uB2E4. AGY \uAE30\uBCF8\uAC12\uC744 \uC4F0\uB824\uBA74 \uC790\uB3D9\uC73C\uB85C \uB461\uB2C8\uB2E4.").addDropdown((dropdown) => {
+      dropdown.addOption("", "\uC790\uB3D9 / AGY \uAE30\uBCF8\uAC12");
       dropdown.addOption("Gemini 3.5 Flash (Medium)", "Gemini 3.5 Flash (Medium)");
       dropdown.addOption("Gemini 3.5 Flash (High)", "Gemini 3.5 Flash (High)");
       dropdown.addOption("Gemini 3.5 Flash (Low)", "Gemini 3.5 Flash (Low)");
@@ -117,17 +117,17 @@ var MokAgySettingTab = class extends import_obsidian.PluginSettingTab {
         await this.plugin.saveSettings();
       });
     });
-    new import_obsidian.Setting(containerEl).setName("Agent Permission Mode").setDesc("Review is preview-first. Auto and Yolo are reserved for trusted vault workflows.").addDropdown((dropdown) => {
-      dropdown.addOption("review", "Safe / Review");
-      dropdown.addOption("auto", "Auto");
-      dropdown.addOption("yolo", "Yolo");
+    new import_obsidian.Setting(containerEl).setName("\uC5D0\uC774\uC804\uD2B8 \uAD8C\uD55C \uBAA8\uB4DC").setDesc("\uAC80\uD1A0 \uC6B0\uC120\uC740 \uBBF8\uB9AC\uBCF4\uAE30 \uC911\uC2EC\uC785\uB2C8\uB2E4. \uC790\uB3D9 \uC2E4\uD589\uACFC \uC81C\uD55C \uC5C6\uC74C\uC740 \uC2E0\uB8B0\uD560 \uC218 \uC788\uB294 vault \uC791\uC5C5\uC5D0\uB9CC \uC0AC\uC6A9\uD558\uC138\uC694.").addDropdown((dropdown) => {
+      dropdown.addOption("review", "\uC548\uC804 / \uAC80\uD1A0 \uC6B0\uC120");
+      dropdown.addOption("auto", "\uC790\uB3D9 \uC2E4\uD589");
+      dropdown.addOption("yolo", "\uC81C\uD55C \uC5C6\uC74C");
       dropdown.setValue(this.plugin.settings.agentPermissionMode);
       dropdown.onChange(async (value) => {
         this.plugin.settings.agentPermissionMode = value;
         await this.plugin.saveSettings();
       });
     });
-    new import_obsidian.Setting(containerEl).setName("Agent Timeout (seconds)").setDesc("Maximum time to wait for a single agent run.").addText(
+    new import_obsidian.Setting(containerEl).setName("\uC5D0\uC774\uC804\uD2B8 \uC81C\uD55C \uC2DC\uAC04(\uCD08)").setDesc("\uD55C \uBC88\uC758 \uC5D0\uC774\uC804\uD2B8 \uC2E4\uD589\uC744 \uAE30\uB2E4\uB9B4 \uCD5C\uB300 \uC2DC\uAC04\uC785\uB2C8\uB2E4.").addText(
       (text) => text.setPlaceholder("180").setValue(String(this.plugin.settings.agentTimeoutSeconds)).onChange(async (value) => {
         const num = parseInt(value);
         if (!isNaN(num) && num >= 30) {
@@ -136,51 +136,51 @@ var MokAgySettingTab = class extends import_obsidian.PluginSettingTab {
         }
       })
     );
-    new import_obsidian.Setting(containerEl).setName("Use Obsidian Writing Skill").setDesc("Inject a vault-local Obsidian writing skill into Agent prompts by default.").addToggle(
+    new import_obsidian.Setting(containerEl).setName("Obsidian \uC791\uC131 \uC2A4\uD0AC \uC0AC\uC6A9").setDesc("vault \uC548\uC758 Obsidian \uC791\uC131 \uC2A4\uD0AC\uC744 \uC5D0\uC774\uC804\uD2B8 \uD504\uB86C\uD504\uD2B8\uC5D0 \uAE30\uBCF8\uC73C\uB85C \uD3EC\uD568\uD569\uB2C8\uB2E4.").addToggle(
       (toggle) => toggle.setValue(this.plugin.settings.agentUseObsidianSkill).onChange(async (value) => {
         this.plugin.settings.agentUseObsidianSkill = value;
         await this.plugin.saveSettings();
       })
     );
-    new import_obsidian.Setting(containerEl).setName("Obsidian Skill File").setDesc("Vault-relative skill file used for Markdown note writing instructions.").addText(
+    new import_obsidian.Setting(containerEl).setName("Obsidian \uC2A4\uD0AC \uD30C\uC77C").setDesc("Markdown \uB178\uD2B8 \uC791\uC131 \uC9C0\uC2DC\uBB38\uC73C\uB85C \uC0AC\uC6A9\uD560 vault \uC0C1\uB300 \uACBD\uB85C\uC758 \uC2A4\uD0AC \uD30C\uC77C\uC785\uB2C8\uB2E4.").addText(
       (text) => text.setPlaceholder("_omg/skills/obsidian-writing-skill.md").setValue(this.plugin.settings.agentObsidianSkillPath).onChange(async (value) => {
         this.plugin.settings.agentObsidianSkillPath = this.plugin.normalizeFolder(value.trim() || "_omg/skills/obsidian-writing-skill.md", "_omg/skills/obsidian-writing-skill.md");
         await this.plugin.saveSettings();
       })
     ).addButton(
-      (button) => button.setButtonText("Install skill").onClick(async () => {
+      (button) => button.setButtonText("\uC2A4\uD0AC \uC124\uCE58").onClick(async () => {
         const path = await this.plugin.installObsidianWritingSkill();
-        new import_obsidian.Notice(`Obsidian writing skill installed: ${path}`);
+        new import_obsidian.Notice(`Obsidian \uC791\uC131 \uC2A4\uD0AC\uC744 \uC124\uCE58\uD588\uC2B5\uB2C8\uB2E4: ${path}`);
         this.display();
       })
     );
-    containerEl.createEl("h2", { text: "Context Dashboard" });
+    containerEl.createEl("h2", { text: "\uBB38\uB9E5 \uB300\uC2DC\uBCF4\uB4DC" });
     const dashboardEl = containerEl.createDiv({ cls: "gemini-sync-dashboard" });
     this.renderDashboard(dashboardEl);
-    containerEl.createEl("h2", { text: "Actions" });
-    new import_obsidian.Setting(containerEl).setName("Clear Legacy Gemini Sync Data").setDesc("Remove old local Gemini sync mappings from this plugin data file. This does not call external APIs.").addButton(
-      (button) => button.setButtonText("Clear").setWarning().onClick(async () => {
+    containerEl.createEl("h2", { text: "\uC791\uC5C5" });
+    new import_obsidian.Setting(containerEl).setName("\uAE30\uC874 Gemini \uB3D9\uAE30\uD654 \uB370\uC774\uD130 \uC9C0\uC6B0\uAE30").setDesc("\uC774 \uD50C\uB7EC\uADF8\uC778 \uB370\uC774\uD130 \uD30C\uC77C\uC5D0 \uB0A8\uC544 \uC788\uB294 \uC608\uC804 Gemini \uB3D9\uAE30\uD654 \uB9E4\uD551\uC744 \uC9C0\uC6C1\uB2C8\uB2E4. \uC678\uBD80 API\uB294 \uD638\uCD9C\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.").addButton(
+      (button) => button.setButtonText("\uC9C0\uC6B0\uAE30").setWarning().onClick(async () => {
         this.plugin.settings.files = {};
         this.plugin.settings.corpusName = "";
         await this.plugin.saveSettings();
-        new import_obsidian.Notice("Legacy sync data cleared");
+        new import_obsidian.Notice("\uAE30\uC874 \uB3D9\uAE30\uD654 \uB370\uC774\uD130\uB97C \uC9C0\uC6E0\uC2B5\uB2C8\uB2E4.");
         this.display();
       })
     );
-    containerEl.createEl("h2", { text: "Apply to Note" });
-    new import_obsidian.Setting(containerEl).setName("Include Metadata").setDesc("Add date and source information when inserting AI responses into notes.").addToggle(
+    containerEl.createEl("h2", { text: "\uB178\uD2B8\uC5D0 \uBC18\uC601" });
+    new import_obsidian.Setting(containerEl).setName("\uBA54\uD0C0\uB370\uC774\uD130 \uD3EC\uD568").setDesc("AI \uC751\uB2F5\uC744 \uB178\uD2B8\uC5D0 \uB123\uC744 \uB54C \uB0A0\uC9DC\uC640 \uCD9C\uCC98 \uC815\uBCF4\uB97C \uD568\uAED8 \uCD94\uAC00\uD569\uB2C8\uB2E4.").addToggle(
       (toggle) => toggle.setValue(this.plugin.settings.includeMetadata).onChange(async (value) => {
         this.plugin.settings.includeMetadata = value;
         await this.plugin.saveSettings();
       })
     );
-    containerEl.createEl("h2", { text: "Help" });
+    containerEl.createEl("h2", { text: "\uB3C4\uC6C0\uB9D0" });
     const helpEl = containerEl.createDiv({ cls: "gemini-sync-help" });
     helpEl.createEl("p", {
-      text: "Master of Knowledge AGY uses your local Antigravity CLI OAuth session for Agent workflows. Google API key setup is disabled in this fork."
+      text: "\uC9C0\uC2DD \uB9C8\uC2A4\uD130 AGY\uB294 \uB85C\uCEEC Antigravity CLI OAuth \uC138\uC158\uC73C\uB85C \uC5D0\uC774\uC804\uD2B8 \uC791\uC5C5\uC744 \uC2E4\uD589\uD569\uB2C8\uB2E4. \uC774 fork\uC5D0\uC11C\uB294 Google API \uD0A4 \uC124\uC815\uC744 \uC0AC\uC6A9\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4."
     });
     helpEl.createEl("p", {
-      text: "Install or configure the AGY CLI so Obsidian can find it, then choose context folders and run tasks from the Agent tab."
+      text: "Obsidian\uC774 AGY CLI\uB97C \uCC3E\uC744 \uC218 \uC788\uB3C4\uB85D \uC124\uCE58\uD558\uAC70\uB098 \uACBD\uB85C\uB97C \uC124\uC815\uD55C \uB4A4, \uBB38\uB9E5 \uD3F4\uB354\uB97C \uC120\uD0DD\uD558\uACE0 \uC5D0\uC774\uC804\uD2B8 \uD0ED\uC5D0\uC11C \uC791\uC5C5\uC744 \uC2E4\uD589\uD558\uC138\uC694."
     });
   }
   getAllFolders() {
@@ -207,7 +207,7 @@ var MokAgySettingTab = class extends import_obsidian.PluginSettingTab {
     const controlsEl = pickerEl.createDiv({ cls: "mok-folder-picker-controls" });
     const selectEl = controlsEl.createEl("select", { cls: "dropdown mok-folder-select" });
     selectEl.createEl("option", {
-      text: availableFolders.length > 0 ? "Choose a folder to add..." : "No more folders available",
+      text: availableFolders.length > 0 ? "\uCD94\uAC00\uD560 \uD3F4\uB354 \uC120\uD0DD..." : "\uCD94\uAC00\uD560 \uD3F4\uB354\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4",
       value: ""
     });
     for (const folder of availableFolders) {
@@ -215,13 +215,13 @@ var MokAgySettingTab = class extends import_obsidian.PluginSettingTab {
     }
     const addButton = controlsEl.createEl("button", {
       cls: "mod-cta mok-folder-add-button",
-      text: "Add"
+      text: "\uCD94\uAC00"
     });
     addButton.disabled = availableFolders.length === 0;
     addButton.addEventListener("click", async () => {
       const folder = selectEl.value;
       if (!folder) {
-        new import_obsidian.Notice("Choose a folder first.");
+        new import_obsidian.Notice("\uBA3C\uC800 \uD3F4\uB354\uB97C \uC120\uD0DD\uD558\uC138\uC694.");
         return;
       }
       await this.updateSyncFolders([...selectedFolders, folder]);
@@ -229,7 +229,7 @@ var MokAgySettingTab = class extends import_obsidian.PluginSettingTab {
     if (selectedFolders.length > 0) {
       const clearButton = controlsEl.createEl("button", {
         cls: "mok-folder-clear-button",
-        text: "Clear"
+        text: "\uC804\uCCB4 \uD574\uC81C"
       });
       clearButton.addEventListener("click", async () => {
         await this.updateSyncFolders([]);
@@ -237,7 +237,7 @@ var MokAgySettingTab = class extends import_obsidian.PluginSettingTab {
     }
     const summaryEl = pickerEl.createDiv({
       cls: "mok-folder-picker-summary",
-      text: selectedFolders.length === 0 ? "No folders selected." : `${selectedFolders.length} folder${selectedFolders.length === 1 ? "" : "s"} selected.`
+      text: selectedFolders.length === 0 ? "\uC120\uD0DD\uB41C \uD3F4\uB354\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4." : `\uD3F4\uB354 ${selectedFolders.length}\uAC1C \uC120\uD0DD\uB428.`
     });
     const chipsEl = pickerEl.createDiv({ cls: "mok-folder-chip-list" });
     for (const folder of selectedFolders) {
@@ -246,14 +246,14 @@ var MokAgySettingTab = class extends import_obsidian.PluginSettingTab {
       const removeButton = chipEl.createEl("button", {
         cls: "mok-folder-chip-remove",
         text: "x",
-        attr: { "aria-label": `Remove ${folder}` }
+        attr: { "aria-label": `${folder} \uC81C\uAC70` }
       });
       removeButton.addEventListener("click", async () => {
         await this.updateSyncFolders(selectedFolders.filter((item) => item !== folder));
       });
     }
     if (folders.length === 0) {
-      summaryEl.setText("No folders found in this vault.");
+      summaryEl.setText("\uC774 vault\uC5D0\uC11C \uD3F4\uB354\uB97C \uCC3E\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.");
     }
   }
   async updateSyncFolders(folders) {
@@ -269,24 +269,24 @@ var MokAgySettingTab = class extends import_obsidian.PluginSettingTab {
     const statsEl = container.createDiv({ cls: "sync-stats" });
     statsEl.createEl("div", {
       cls: "sync-stat",
-      text: `\u{1F4C1} Context Files: ${fileCount}`
+      text: `\u{1F4C1} \uBB38\uB9E5 \uD30C\uC77C: ${fileCount}\uAC1C`
     });
     if (this.plugin.settings.syncFolders.length > 0) {
       const folders = this.plugin.settings.syncFolders;
-      const folderText = folders.length > 5 ? `${folders.slice(0, 5).join(", ")} +${folders.length - 5} more` : folders.join(", ");
+      const folderText = folders.length > 5 ? `${folders.slice(0, 5).join(", ")} \uC678 ${folders.length - 5}\uAC1C` : folders.join(", ");
       container.createEl("div", {
         cls: "sync-folder-info",
-        text: `Context folders: ${folderText}`
+        text: `\uBB38\uB9E5 \uD3F4\uB354: ${folderText}`
       });
     } else {
       container.createEl("div", {
         cls: "sync-folder-info",
-        text: "No context folders selected."
+        text: "\uC120\uD0DD\uB41C \uBB38\uB9E5 \uD3F4\uB354\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4."
       });
     }
     container.createEl("div", {
       cls: "sync-corpus-info",
-      text: "Google Gemini API sync is disabled. Context stays local and is passed to the Antigravity CLI prompt."
+      text: "Google Gemini API \uB3D9\uAE30\uD654\uB294 \uBE44\uD65C\uC131\uD654\uB418\uC5B4 \uC788\uC2B5\uB2C8\uB2E4. \uBB38\uB9E5\uC740 \uB85C\uCEEC\uC5D0 \uB0A8\uACE0 Antigravity CLI \uD504\uB86C\uD504\uD2B8\uC5D0\uB9CC \uC804\uB2EC\uB429\uB2C8\uB2E4."
     });
   }
 };
@@ -297,7 +297,7 @@ var NoteSelectorModal = class extends import_obsidian2.FuzzySuggestModal {
   constructor(app, onSelect) {
     super(app);
     this.onSelect = onSelect;
-    this.setPlaceholder("Select a note to apply content...");
+    this.setPlaceholder("\uB0B4\uC6A9\uC744 \uBC18\uC601\uD560 \uB178\uD2B8\uB97C \uC120\uD0DD\uD558\uC138\uC694...");
   }
   getItems() {
     return this.app.vault.getMarkdownFiles();
@@ -327,7 +327,7 @@ var ChatView = class extends import_obsidian2.ItemView {
     return CHAT_VIEW_TYPE;
   }
   getDisplayText() {
-    return "Master of Knowledge";
+    return "\uC9C0\uC2DD \uB9C8\uC2A4\uD130 AGY";
   }
   getIcon() {
     return "brain";
@@ -337,17 +337,17 @@ var ChatView = class extends import_obsidian2.ItemView {
     container.empty();
     container.addClass("gemini-chat-container");
     const header = container.createDiv({ cls: "gemini-chat-header" });
-    header.createEl("h4", { text: "Master of Knowledge AGY" });
+    header.createEl("h4", { text: "\uC9C0\uC2DD \uB9C8\uC2A4\uD130 AGY" });
     const headerActions = header.createDiv({ cls: "gemini-chat-header-actions" });
     const clearBtn = headerActions.createEl("button", {
       cls: "gemini-chat-clear-btn",
-      text: "\u{1F5D1}\uFE0F Clear"
+      text: "\u{1F5D1}\uFE0F \uC9C0\uC6B0\uAE30"
     });
     clearBtn.addEventListener("click", () => this.clearChat());
     const contextCount = this.plugin.getKnowledgeMarkdownFiles().length;
     this.syncStatusEl = headerActions.createEl("span", {
       cls: "gemini-chat-sync-status",
-      text: `\u{1F4DA} ${contextCount} context notes`
+      text: `\u{1F4DA} \uBB38\uB9E5 \uB178\uD2B8 ${contextCount}\uAC1C`
     });
     this.tabBarEl = container.createDiv({ cls: "mok-tabs" });
     this.dashboardContentEl = container.createDiv({ cls: "mok-content" });
@@ -361,7 +361,7 @@ var ChatView = class extends import_obsidian2.ItemView {
   updateSyncStatus() {
     const contextCount = this.plugin.getKnowledgeMarkdownFiles().length;
     if (this.syncStatusEl) {
-      this.syncStatusEl.textContent = `\u{1F4DA} ${contextCount} context notes`;
+      this.syncStatusEl.textContent = `\u{1F4DA} \uBB38\uB9E5 \uB178\uD2B8 ${contextCount}\uAC1C`;
     }
     if (this.welcomeEl) {
       const existingWarning = this.welcomeEl.querySelector(".gemini-chat-welcome-warning");
@@ -373,7 +373,7 @@ var ChatView = class extends import_obsidian2.ItemView {
         if (paragraphs.length > 0) {
           const warningEl = this.welcomeEl.createEl("p", {
             cls: "gemini-chat-welcome-warning",
-            text: "\u26A0\uFE0F No context notes selected yet. Choose context folders in settings to load note excerpts into Agent runs."
+            text: "\u26A0\uFE0F \uC544\uC9C1 \uBB38\uB9E5 \uB178\uD2B8\uAC00 \uC120\uD0DD\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4. \uC124\uC815\uC5D0\uC11C \uBB38\uB9E5 \uD3F4\uB354\uB97C \uC120\uD0DD\uD558\uBA74 \uC5D0\uC774\uC804\uD2B8 \uC2E4\uD589 \uC2DC \uB178\uD2B8 \uBC1C\uCDCC\uAC00 \uD568\uAED8 \uC804\uB2EC\uB429\uB2C8\uB2E4."
           });
           paragraphs[0].after(warningEl);
         }
@@ -383,10 +383,10 @@ var ChatView = class extends import_obsidian2.ItemView {
   renderTabs() {
     this.tabBarEl.empty();
     const tabs = [
-      { id: "agent", label: "Agent" },
-      { id: "workspace", label: "_omg" },
-      { id: "graph", label: "Graph" },
-      { id: "settings", label: "Settings" }
+      { id: "agent", label: "\uC5D0\uC774\uC804\uD2B8" },
+      { id: "workspace", label: "\uC791\uC5C5\uACF5\uAC04" },
+      { id: "graph", label: "\uAD00\uACC4\uB3C4" },
+      { id: "settings", label: "\uC124\uC815" }
     ];
     for (const tab of tabs) {
       const button = this.tabBarEl.createEl("button", {
@@ -429,7 +429,7 @@ var ChatView = class extends import_obsidian2.ItemView {
     }
     this.inputEl = this.inputContainer.createEl("textarea", {
       cls: "gemini-chat-input",
-      placeholder: this.activeTab === "agent" ? "Ask the Agent to research, compile, map, or write..." : "Ask about your notes..."
+      placeholder: this.activeTab === "agent" ? "\uC870\uC0AC, \uC815\uB9AC, \uAD00\uACC4\uB3C4 \uC791\uC131, \uB178\uD2B8 \uC0DD\uC131\uC744 \uC694\uCCAD\uD558\uC138\uC694..." : "\uB178\uD2B8\uC5D0 \uB300\uD574 \uC9C8\uBB38\uD558\uC138\uC694..."
     });
     this.inputEl.addEventListener("compositionstart", () => {
       this.isComposing = true;
@@ -455,7 +455,7 @@ var ChatView = class extends import_obsidian2.ItemView {
       text: this.isLoading && this.loadingTab === this.activeTab ? this.activeTab === "agent" ? "\u25A0" : "\u23F3" : "\u27A4"
     });
     this.sendButton.disabled = this.isLoading && this.activeTab !== "agent";
-    this.sendButton.setAttr("aria-label", this.isLoading && this.activeTab === "agent" ? "Stop Agent" : "Send");
+    this.sendButton.setAttr("aria-label", this.isLoading && this.activeTab === "agent" ? "\uC5D0\uC774\uC804\uD2B8 \uC911\uC9C0" : "\uBCF4\uB0B4\uAE30");
     this.sendButton.addEventListener("click", () => {
       if (this.isLoading && this.activeTab === "agent") {
         this.stopAgentRun();
@@ -468,7 +468,7 @@ var ChatView = class extends import_obsidian2.ItemView {
       loadingEl.createEl("span", { cls: "gemini-chat-loading-dots", text: "\u25CF\u25CF\u25CF" });
       loadingEl.createEl("span", {
         cls: "gemini-chat-loading-label",
-        text: this.activeTab === "agent" ? "Agent is still running..." : "Thinking..."
+        text: this.activeTab === "agent" ? "\uC5D0\uC774\uC804\uD2B8\uAC00 \uC544\uC9C1 \uC2E4\uD589 \uC911\uC785\uB2C8\uB2E4..." : "\uC0DD\uAC01 \uC911\uC785\uB2C8\uB2E4..."
       });
     }
   }
@@ -476,27 +476,27 @@ var ChatView = class extends import_obsidian2.ItemView {
     const toolbar = this.dashboardContentEl.createDiv({ cls: "mok-conversation-toolbar" });
     const title = toolbar.createDiv({ cls: "mok-conversation-title" });
     title.createEl("span", {
-      text: "Agent conversation"
+      text: "\uC5D0\uC774\uC804\uD2B8 \uB300\uD654"
     });
     title.createEl("small", {
-      text: "Start a fresh Agent run without clearing saved results."
+      text: "\uC800\uC7A5\uB41C \uACB0\uACFC\uB294 \uC720\uC9C0\uD55C \uCC44 \uC0C8 \uC5D0\uC774\uC804\uD2B8 \uB300\uD654\uB97C \uC2DC\uC791\uD569\uB2C8\uB2E4."
     });
     const newButton = toolbar.createEl("button", {
       cls: "mok-new-conversation-btn",
-      text: "+ New agent chat"
+      text: "+ \uC0C8 \uC5D0\uC774\uC804\uD2B8 \uB300\uD654"
     });
     const isRunningHere = this.isLoading && this.loadingTab === this.activeTab;
     newButton.disabled = isRunningHere;
-    newButton.setAttr("aria-label", "Start new Agent chat");
+    newButton.setAttr("aria-label", "\uC0C8 \uC5D0\uC774\uC804\uD2B8 \uB300\uD654 \uC2DC\uC791");
     if (isRunningHere) {
-      newButton.setAttr("title", "Stop the current run before starting a new conversation.");
+      newButton.setAttr("title", "\uC0C8 \uB300\uD654\uB97C \uC2DC\uC791\uD558\uB824\uBA74 \uD604\uC7AC \uC2E4\uD589\uC744 \uBA3C\uC800 \uC911\uC9C0\uD558\uC138\uC694.");
     }
     newButton.addEventListener("click", () => this.startNewConversation());
   }
   renderWorkspaceTab() {
     const panel = this.dashboardContentEl.createDiv({ cls: "mok-panel" });
-    panel.createEl("h3", { text: `${this.plugin.settings.workspaceFolder} workspace` });
-    panel.createEl("p", { text: "Generated Agent reports, compiled notes, graph JSON, Canvas maps, reports, and logs are kept separate from your source notes." });
+    panel.createEl("h3", { text: `${this.plugin.settings.workspaceFolder} \uC791\uC5C5\uACF5\uAC04` });
+    panel.createEl("p", { text: "\uC5D0\uC774\uC804\uD2B8 \uBCF4\uACE0\uC11C, \uC815\uB9AC \uB178\uD2B8, \uAD00\uACC4\uB3C4 JSON, \uCE94\uBC84\uC2A4 \uC9C0\uB3C4, \uB85C\uADF8\uB294 \uC6D0\uBCF8 \uB178\uD2B8\uC640 \uBD84\uB9AC\uD574 \uBCF4\uAD00\uB429\uB2C8\uB2E4." });
     const folders = [
       `${this.plugin.settings.workspaceFolder}/compiled`,
       this.plugin.settings.agentOutputFolder,
@@ -507,32 +507,32 @@ var ChatView = class extends import_obsidian2.ItemView {
     const list = panel.createEl("ul");
     for (const folder of folders) {
       const exists = this.app.vault.getAbstractFileByPath(folder) ? "ready" : "missing";
-      list.createEl("li", { text: `${folder} (${exists})` });
+      list.createEl("li", { text: `${folder} (${exists === "ready" ? "\uC900\uBE44\uB428" : "\uC5C6\uC74C"})` });
     }
-    const createBtn = panel.createEl("button", { cls: "gemini-chat-action-btn", text: "Create workspace folders" });
+    const createBtn = panel.createEl("button", { cls: "gemini-chat-action-btn", text: "\uC791\uC5C5\uACF5\uAC04 \uD3F4\uB354 \uB9CC\uB4E4\uAE30" });
     createBtn.addEventListener("click", async () => {
       for (const folder of folders) await this.plugin.ensureVaultFolder(folder);
-      new import_obsidian2.Notice("Master of Knowledge AGY workspace folders are ready.");
+      new import_obsidian2.Notice("\uC9C0\uC2DD \uB9C8\uC2A4\uD130 AGY \uC791\uC5C5\uACF5\uAC04 \uD3F4\uB354\uAC00 \uC900\uBE44\uB418\uC5C8\uC2B5\uB2C8\uB2E4.");
       this.renderActiveTab();
     });
     const graphBtn = panel.createEl("button", {
       cls: "gemini-chat-action-btn",
-      text: "Build knowledge graph"
+      text: "\uC9C0\uC2DD \uAD00\uACC4\uB3C4 \uB9CC\uB4E4\uAE30"
     });
     graphBtn.addEventListener("click", async () => {
-      graphBtn.setText("Building graph...");
+      graphBtn.setText("\uAD00\uACC4\uB3C4 \uC0DD\uC131 \uC911...");
       graphBtn.setAttr("disabled", "true");
       try {
         const { jsonPath, canvasPath, reportPath, nodeCount, edgeCount, communityCount } = await this.buildKnowledgeGraphArtifacts();
-        new import_obsidian2.Notice(`Knowledge graph built: ${nodeCount} nodes, ${edgeCount} links, ${communityCount} communities`);
+        new import_obsidian2.Notice(`\uC9C0\uC2DD \uAD00\uACC4\uB3C4 \uC0DD\uC131 \uC644\uB8CC: \uB178\uB4DC ${nodeCount}\uAC1C, \uC5F0\uACB0 ${edgeCount}\uAC1C, \uBB36\uC74C ${communityCount}\uAC1C`);
         await this.app.workspace.openLinkText(canvasPath || jsonPath, "", true);
         void reportPath;
       } catch (error) {
-        new import_obsidian2.Notice("Failed to build knowledge graph.");
-        console.error("Graph build error:", error);
+        new import_obsidian2.Notice("\uC9C0\uC2DD \uAD00\uACC4\uB3C4\uB97C \uB9CC\uB4E4\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.");
+        console.error("\uAD00\uACC4\uB3C4 \uC0DD\uC131 \uC624\uB958:", error);
       } finally {
         graphBtn.removeAttribute("disabled");
-        graphBtn.setText("Build knowledge graph");
+        graphBtn.setText("\uC9C0\uC2DD \uAD00\uACC4\uB3C4 \uB9CC\uB4E4\uAE30");
         this.renderActiveTab();
       }
     });
@@ -600,7 +600,7 @@ var ChatView = class extends import_obsidian2.ItemView {
       generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
       vault: this.plugin.getVaultPath(),
       syncFolders: this.plugin.settings.syncFolders,
-      description: "Graphify-lite vault graph built from local context Obsidian wikilinks and tags. Edges are deterministic EXTRACTED links, not LLM-inferred semantic relations.",
+      description: "\uB85C\uCEEC \uBB38\uB9E5 \uB178\uD2B8\uC758 Obsidian \uC704\uD0A4\uB9C1\uD06C\uC640 \uD0DC\uADF8\uC5D0\uC11C \uB9CC\uB4E0 \uACBD\uB7C9 vault \uAD00\uACC4\uB3C4\uC785\uB2C8\uB2E4. \uC5F0\uACB0\uC740 LLM \uCD94\uB860\uC774 \uC544\uB2C8\uB77C \uBA85\uC2DC \uBB38\uBC95\uC5D0\uC11C \uCD94\uCD9C\uD55C \uD56D\uBAA9\uC785\uB2C8\uB2E4.",
       metrics: {
         nodes: allNodes.length,
         noteNodes: nodes.length,
@@ -661,7 +661,7 @@ var ChatView = class extends import_obsidian2.ItemView {
         width: groupWidth,
         height: groupHeight,
         color: this.communityCanvasColor(community),
-        label: `Community ${community + 1} \xB7 ${members.length} notes`
+        label: `\uBB36\uC74C ${community + 1} \xB7 \uB178\uD2B8 ${members.length}\uAC1C`
       });
       const [hub, ...rest] = shown;
       if (hub) {
@@ -705,7 +705,7 @@ var ChatView = class extends import_obsidian2.ItemView {
         width: 760,
         height: Math.max(520, tagNodes.length * 150 + 180),
         color: "6",
-        label: "Tag Bridges"
+        label: "\uD0DC\uADF8 \uC5F0\uACB0"
       });
       tagNodes.forEach((node, index) => {
         canvasNodes.push({
@@ -717,7 +717,7 @@ var ChatView = class extends import_obsidian2.ItemView {
           height: 90,
           color: this.communityCanvasColor(node.community || 5),
           text: `${node.title}
-${node.degree || 0} linked notes`
+\uC5F0\uACB0\uB41C \uB178\uD2B8 ${node.degree || 0}\uAC1C`
         });
       });
       void maxHeight;
@@ -762,9 +762,9 @@ ${node.degree || 0} linked notes`
       height: 180,
       color: "6",
       text: [
-        "Master of Knowledge Graph",
-        "Community groups are ranked by PageRank and degree. Large cards are local hubs. Tag Bridges show cross-cutting tags.",
-        "This canvas intentionally shows the most meaningful nodes, not every context note."
+        "\uC9C0\uC2DD \uAD00\uACC4\uB3C4",
+        "\uBB36\uC74C\uC740 PageRank\uC640 \uC5F0\uACB0 \uC218 \uAE30\uC900\uC73C\uB85C \uC815\uB82C\uB429\uB2C8\uB2E4. \uD070 \uCE74\uB4DC\uB294 \uB85C\uCEEC \uD5C8\uBE0C \uB178\uD2B8\uC774\uACE0, \uD0DC\uADF8 \uC5F0\uACB0\uC740 \uC5EC\uB7EC \uC8FC\uC81C\uB97C \uAC00\uB85C\uC9C0\uB974\uB294 \uD0DC\uADF8\uB97C \uBCF4\uC5EC\uC90D\uB2C8\uB2E4.",
+        "\uC774 \uCE94\uBC84\uC2A4\uB294 \uBAA8\uB4E0 \uBB38\uB9E5 \uB178\uD2B8\uAC00 \uC544\uB2C8\uB77C \uAD00\uACC4\uAC00 \uB69C\uB837\uD55C \uC8FC\uC694 \uB178\uB4DC\uB97C \uC120\uBCC4\uD574 \uBCF4\uC5EC\uC90D\uB2C8\uB2E4."
       ].join("\n")
     });
     return { nodes: canvasNodes, edges: canvasEdges };
@@ -888,45 +888,45 @@ ${node.degree || 0} linked notes`
     }
     const communityLines = Array.from(communities.entries()).sort((a, b) => b[1].length - a[1].length).slice(0, 12).map(([community, members]) => {
       const examples = members.sort((a, b) => (b.pageRank || 0) - (a.pageRank || 0)).slice(0, 5).map((node) => node.title).join(", ");
-      return `- Community ${community}: ${members.length} nodes \u2014 ${examples}`;
+      return `- \uBB36\uC74C ${community}: \uB178\uB4DC ${members.length}\uAC1C - ${examples}`;
     });
     const hubLines = hubs.map((node) => {
       const rank = ((node.pageRank || 0) * 100).toFixed(1);
-      return `- ${node.title} \u2014 PageRank ${rank}, degree ${node.degree || 0}, community ${node.community || 0}`;
+      return `- ${node.title} - PageRank ${rank}, \uC5F0\uACB0 \uC218 ${node.degree || 0}, \uBB36\uC74C ${node.community || 0}`;
     });
     return [
-      "# Master of Knowledge Graph Report",
+      "# \uC9C0\uC2DD \uAD00\uACC4\uB3C4 \uBCF4\uACE0\uC11C",
       "",
-      `Generated: ${(/* @__PURE__ */ new Date()).toISOString()}`,
+      `\uC0DD\uC131 \uC2DC\uAC01: ${(/* @__PURE__ */ new Date()).toISOString()}`,
       "",
-      "## Scope",
+      "## \uBC94\uC704",
       "",
-      `- Notes: ${notes.length}`,
-      `- Tags: ${tags.length}`,
-      `- Edges: ${edges.length}`,
-      `- Communities: ${communityCount}`,
+      `- \uB178\uD2B8: ${notes.length}`,
+      `- \uD0DC\uADF8: ${tags.length}`,
+      `- \uC5F0\uACB0: ${edges.length}`,
+      `- \uBB36\uC74C: ${communityCount}`,
       "",
-      "## Method",
+      "## \uBC29\uBC95",
       "",
-      "- Source corpus: only notes selected by Agent Context Folders.",
-      "- Edges: Obsidian wikilinks and tags only.",
-      "- Confidence: all edges are marked EXTRACTED because they come from explicit note syntax.",
-      "- Analytics: lightweight PageRank and Label Propagation community detection inspired by Alda graphify.",
+      "- \uC6D0\uBCF8 \uBC94\uC704: \uC5D0\uC774\uC804\uD2B8 \uBB38\uB9E5 \uD3F4\uB354\uB85C \uC120\uD0DD\uD55C \uB178\uD2B8\uB9CC \uC0AC\uC6A9\uD569\uB2C8\uB2E4.",
+      "- \uC5F0\uACB0 \uAE30\uC900: Obsidian \uC704\uD0A4\uB9C1\uD06C\uC640 \uD0DC\uADF8\uB9CC \uC0AC\uC6A9\uD569\uB2C8\uB2E4.",
+      "- \uC2E0\uB8B0\uB3C4: \uBAA8\uB4E0 \uC5F0\uACB0\uC740 \uB178\uD2B8 \uBB38\uBC95\uC5D0\uC11C \uC9C1\uC811 \uCD94\uCD9C\uB41C \uD56D\uBAA9\uC785\uB2C8\uB2E4.",
+      "- \uBD84\uC11D \uBC29\uC2DD: Alda graphify \uC2A4\uD0C0\uC77C\uC758 \uACBD\uB7C9 PageRank\uC640 Label Propagation \uBB36\uC74C \uD0D0\uC9C0\uB97C \uC0AC\uC6A9\uD569\uB2C8\uB2E4.",
       "",
-      "## Hub Nodes",
+      "## \uD5C8\uBE0C \uB178\uB4DC",
       "",
-      hubLines.length ? hubLines.join("\n") : "- No connected hubs yet. Add wikilinks or tags between context notes.",
+      hubLines.length ? hubLines.join("\n") : "- \uC544\uC9C1 \uC5F0\uACB0\uB41C \uD5C8\uBE0C\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. \uBB38\uB9E5 \uB178\uD2B8 \uC0AC\uC774\uC5D0 \uC704\uD0A4\uB9C1\uD06C\uB098 \uD0DC\uADF8\uB97C \uCD94\uAC00\uD558\uC138\uC694.",
       "",
-      "## Communities",
+      "## \uBB36\uC74C",
       "",
-      communityLines.length ? communityLines.join("\n") : "- No communities detected yet.",
+      communityLines.length ? communityLines.join("\n") : "- \uC544\uC9C1 \uBB36\uC74C\uC774 \uD0D0\uC9C0\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.",
       "",
-      "## Honest Limits",
+      "## \uD604\uC7AC \uD55C\uACC4",
       "",
-      "- This is graphify-lite, not a full semantic entity graph yet.",
-      "- It does not extract entities/concepts with an LLM.",
-      "- It does not create INFERRED or AMBIGUOUS semantic edges.",
-      "- It does not yet include a Cytoscape-style interactive dashboard.",
+      "- \uD604\uC7AC \uAD00\uACC4\uB3C4\uB294 \uACBD\uB7C9 graphify \uBC29\uC2DD\uC774\uBA70, \uC644\uC804\uD55C \uC758\uBBF8 \uAE30\uBC18 \uC5D4\uD2F0\uD2F0 \uADF8\uB798\uD504\uB294 \uC544\uB2D9\uB2C8\uB2E4.",
+      "- LLM\uC73C\uB85C \uC5D4\uD2F0\uD2F0\uB098 \uAC1C\uB150\uC744 \uCD94\uCD9C\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.",
+      "- \uCD94\uB860\uD615 \uB610\uB294 \uBAA8\uD638\uD55C \uC758\uBBF8 \uC5F0\uACB0\uC740 \uB9CC\uB4E4\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.",
+      "- Cytoscape \uC218\uC900\uC758 \uBCC4\uB3C4 \uB300\uC2DC\uBCF4\uB4DC\uB294 \uC544\uC9C1 \uD3EC\uD568\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.",
       ""
     ].join("\n");
   }
@@ -937,11 +937,11 @@ ${node.degree || 0} linked notes`
   async renderGraphTab() {
     const panel = this.dashboardContentEl.createDiv({ cls: "mok-panel mok-graph-panel" });
     const header = panel.createDiv({ cls: "mok-graph-header" });
-    header.createEl("h3", { text: "Knowledge Graph" });
-    header.createEl("p", { text: "Alda-style overview of local context notes: PageRank size, community color, 1-hop hover, and click-to-inspect." });
+    header.createEl("h3", { text: "\uC9C0\uC2DD \uAD00\uACC4\uB3C4" });
+    header.createEl("p", { text: "\uB85C\uCEEC \uBB38\uB9E5 \uB178\uD2B8\uB97C PageRank \uD06C\uAE30, \uBB36\uC74C \uC0C9\uC0C1, 1\uB2E8\uACC4 \uC5F0\uACB0 \uAC15\uC870, \uD074\uB9AD \uC0C1\uC138 \uBCF4\uAE30\uB85C \uD0D0\uC0C9\uD569\uB2C8\uB2E4." });
     const controls = panel.createDiv({ cls: "mok-graph-controls" });
     const maxLabel = controls.createEl("label", { cls: "mok-graph-control-label" });
-    maxLabel.createSpan({ text: "Top nodes" });
+    maxLabel.createSpan({ text: "\uC0C1\uC704 \uB178\uB4DC" });
     const maxInput = maxLabel.createEl("input", { type: "range" });
     maxInput.min = "80";
     maxInput.max = "300";
@@ -951,53 +951,53 @@ ${node.degree || 0} linked notes`
     const hideLabel = controls.createEl("label", { cls: "mok-graph-check-label" });
     const hideInput = hideLabel.createEl("input", { type: "checkbox" });
     hideInput.checked = true;
-    hideLabel.createSpan({ text: "Hide isolated" });
+    hideLabel.createSpan({ text: "\uACE0\uB9BD \uB178\uB4DC \uC228\uAE40" });
     const tagLabel = controls.createEl("label", { cls: "mok-graph-check-label" });
     const tagInput = tagLabel.createEl("input", { type: "checkbox" });
     tagInput.checked = false;
-    tagLabel.createSpan({ text: "Include tags" });
+    tagLabel.createSpan({ text: "\uD0DC\uADF8 \uD3EC\uD568" });
     const searchInput = controls.createEl("input", {
       cls: "mok-graph-search",
       type: "search",
-      placeholder: "Search nodes..."
+      placeholder: "\uB178\uB4DC \uAC80\uC0C9..."
     });
     const rebuildBtn = controls.createEl("button", {
       cls: "gemini-chat-action-btn",
-      text: "Rebuild graph"
+      text: "\uAD00\uACC4\uB3C4 \uB2E4\uC2DC \uB9CC\uB4E4\uAE30"
     });
     const zoomOutBtn = controls.createEl("button", {
       cls: "gemini-chat-action-btn",
       text: "-"
     });
-    zoomOutBtn.setAttr("aria-label", "Zoom out graph");
+    zoomOutBtn.setAttr("aria-label", "\uAD00\uACC4\uB3C4 \uCD95\uC18C");
     const zoomInBtn = controls.createEl("button", {
       cls: "gemini-chat-action-btn",
       text: "+"
     });
-    zoomInBtn.setAttr("aria-label", "Zoom in graph");
+    zoomInBtn.setAttr("aria-label", "\uAD00\uACC4\uB3C4 \uD655\uB300");
     const fitBtn = controls.createEl("button", {
       cls: "gemini-chat-action-btn",
-      text: "Fit"
+      text: "\uB9DE\uCDA4"
     });
     const relayoutBtn = controls.createEl("button", {
       cls: "gemini-chat-action-btn",
-      text: "Relayout"
+      text: "\uC7AC\uBC30\uCE58"
     });
     const resetBtn = controls.createEl("button", {
       cls: "gemini-chat-action-btn",
-      text: "Reset"
+      text: "\uCD08\uAE30\uD654"
     });
     const statsEl = panel.createDiv({ cls: "mok-graph-stats" });
     const graphWrap = panel.createDiv({ cls: "mok-graph-wrap" });
     const detailPanel = graphWrap.createDiv({ cls: "mok-graph-detail mok-graph-detail-hidden" });
     let graph = await this.loadKnowledgeGraph();
     if (!graph) {
-      statsEl.setText("No graph yet. Build one from your context notes.");
+      statsEl.setText("\uC544\uC9C1 \uAD00\uACC4\uB3C4\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. \uBB38\uB9E5 \uB178\uD2B8\uC5D0\uC11C \uAD00\uACC4\uB3C4\uB97C \uB9CC\uB4E4\uC5B4 \uC8FC\uC138\uC694.");
       const empty = graphWrap.createDiv({ cls: "mok-graph-empty" });
-      empty.createEl("div", { text: "No graph artifact found." });
+      empty.createEl("div", { text: "\uAD00\uACC4\uB3C4 \uC0B0\uCD9C\uBB3C\uC744 \uCC3E\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4." });
       empty.createEl("button", {
         cls: "gemini-chat-action-btn",
-        text: "Build knowledge graph"
+        text: "\uC9C0\uC2DD \uAD00\uACC4\uB3C4 \uB9CC\uB4E4\uAE30"
       }).addEventListener("click", async () => {
         await this.buildKnowledgeGraphArtifacts();
         this.renderActiveTab();
@@ -1031,19 +1031,19 @@ ${node.degree || 0} linked notes`
       redraw();
     });
     rebuildBtn.addEventListener("click", async () => {
-      rebuildBtn.setText("Building...");
+      rebuildBtn.setText("\uC0DD\uC131 \uC911...");
       rebuildBtn.setAttr("disabled", "true");
       try {
         await this.buildKnowledgeGraphArtifacts();
         currentGraph = await this.loadKnowledgeGraph();
         if (currentGraph) redraw();
-        new import_obsidian2.Notice("Knowledge graph rebuilt.");
+        new import_obsidian2.Notice("\uC9C0\uC2DD \uAD00\uACC4\uB3C4\uB97C \uB2E4\uC2DC \uB9CC\uB4E4\uC5C8\uC2B5\uB2C8\uB2E4.");
       } catch (error) {
-        new import_obsidian2.Notice("Failed to rebuild graph.");
-        console.error("Graph rebuild error:", error);
+        new import_obsidian2.Notice("\uAD00\uACC4\uB3C4\uB97C \uB2E4\uC2DC \uB9CC\uB4E4\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.");
+        console.error("\uAD00\uACC4\uB3C4 \uC7AC\uC0DD\uC131 \uC624\uB958:", error);
       } finally {
         rebuildBtn.removeAttribute("disabled");
-        rebuildBtn.setText("Rebuild graph");
+        rebuildBtn.setText("\uAD00\uACC4\uB3C4 \uB2E4\uC2DC \uB9CC\uB4E4\uAE30");
       }
     });
     redraw();
@@ -1058,7 +1058,7 @@ ${node.degree || 0} linked notes`
       if (!Array.isArray(graph.nodes) || !Array.isArray(graph.edges)) return null;
       return graph;
     } catch (error) {
-      console.error("Failed to read knowledge graph:", error);
+      console.error("\uC9C0\uC2DD \uAD00\uACC4\uB3C4\uB97C \uC77D\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4:", error);
       return null;
     }
   }
@@ -1092,7 +1092,7 @@ ${node.degree || 0} linked notes`
     }
     const search = options.search.trim().toLowerCase();
     const searchHits = search ? selected.filter((node) => (node.title || node.path).toLowerCase().includes(search)).length : 0;
-    statsEl.setText(`${selected.length} nodes \xB7 ${edges.length}/${rawEdges.length} visible links \xB7 ${new Set(selected.map((node) => node.community || 0)).size} communities${search ? ` \xB7 ${searchHits} search hits` : ""}`);
+    statsEl.setText(`\uB178\uB4DC ${selected.length}\uAC1C \xB7 \uD45C\uC2DC \uC5F0\uACB0 ${edges.length}/${rawEdges.length}\uAC1C \xB7 \uBB36\uC74C ${new Set(selected.map((node) => node.community || 0)).size}\uAC1C${search ? ` \xB7 \uAC80\uC0C9 \uACB0\uACFC ${searchHits}\uAC1C` : ""}`);
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     svg.setAttribute("viewBox", `0 0 ${layout.width} ${layout.height}`);
     svg.setAttribute("class", "mok-graph-svg");
@@ -1149,7 +1149,7 @@ ${node.degree || 0} linked notes`
       const tooltip = document.createElementNS("http://www.w3.org/2000/svg", "title");
       tooltip.textContent = `${title}
 ${node.path}
-Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100)}`;
+\uC5F0\uACB0 \uC218 ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100)}`;
       group.appendChild(tooltip);
       group.addEventListener("mouseenter", () => {
         const related = neighbors.get(node.id) || /* @__PURE__ */ new Set();
@@ -1285,15 +1285,15 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
     panel.empty();
     panel.removeClass("mok-graph-detail-hidden");
     const close = panel.createEl("button", { cls: "mok-graph-detail-close", text: "x" });
-    close.setAttr("aria-label", "Close graph detail");
+    close.setAttr("aria-label", "\uAD00\uACC4\uB3C4 \uC0C1\uC138 \uB2EB\uAE30");
     close.addEventListener("click", () => panel.addClass("mok-graph-detail-hidden"));
     panel.createEl("div", {
       cls: "mok-graph-detail-kind",
-      text: node.kind === "tag" ? "tag bridge" : "context note"
+      text: node.kind === "tag" ? "\uD0DC\uADF8 \uC5F0\uACB0" : "\uBB38\uB9E5 \uB178\uD2B8"
     });
     panel.createEl("h4", { text: node.title || node.path });
     panel.createEl("p", {
-      text: `${node.path} \xB7 degree ${node.degree || 0} \xB7 visible neighbors ${visibleNeighborIds.length} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100)}`
+      text: `${node.path} \xB7 \uC5F0\uACB0 \uC218 ${node.degree || 0} \xB7 \uD45C\uC2DC\uB41C \uC774\uC6C3 ${visibleNeighborIds.length}\uAC1C \xB7 PageRank ${Math.round((node.pageRank || 0) * 100)}`
     });
     if (node.kind === "note") {
       const file = this.app.vault.getAbstractFileByPath(node.path);
@@ -1301,7 +1301,7 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
         const preview = (await this.app.vault.cachedRead(file)).replace(/---[\s\S]*?---/, "").replace(/\s+/g, " ").trim().slice(0, 360);
         if (preview) panel.createEl("p", { cls: "mok-graph-detail-preview", text: preview });
         const actions = panel.createDiv({ cls: "mok-graph-detail-actions" });
-        const openBtn = actions.createEl("button", { cls: "gemini-chat-action-btn", text: "Open note" });
+        const openBtn = actions.createEl("button", { cls: "gemini-chat-action-btn", text: "\uB178\uD2B8 \uC5F4\uAE30" });
         openBtn.addEventListener("click", async () => {
           await this.app.workspace.getLeaf(true).openFile(file);
         });
@@ -1310,7 +1310,7 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
     const neighbors = visibleNeighborIds.map((id) => selectedById.get(id)).filter((neighbor) => !!neighbor).sort((a, b) => (b.pageRank || 0) - (a.pageRank || 0)).slice(0, 10);
     if (neighbors.length > 0) {
       const relationWrap = panel.createDiv({ cls: "mok-graph-detail-relations" });
-      relationWrap.createEl("strong", { text: "Visible connections" });
+      relationWrap.createEl("strong", { text: "\uD45C\uC2DC\uB41C \uC5F0\uACB0" });
       for (const neighbor of neighbors) {
         const item = relationWrap.createEl("button", {
           cls: "mok-graph-relation-btn",
@@ -1495,24 +1495,24 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
   }
   renderSettingsTab() {
     const panel = this.dashboardContentEl.createDiv({ cls: "mok-panel" });
-    panel.createEl("h3", { text: "Settings" });
-    panel.createEl("p", { text: "Open plugin settings to change context folders, Agent CLI path, Agent output folder, and local workspace options." });
+    panel.createEl("h3", { text: "\uC124\uC815" });
+    panel.createEl("p", { text: "\uBB38\uB9E5 \uD3F4\uB354, \uC5D0\uC774\uC804\uD2B8 CLI \uACBD\uB85C, \uC5D0\uC774\uC804\uD2B8 \uACB0\uACFC \uD3F4\uB354, \uB85C\uCEEC \uC791\uC5C5\uACF5\uAC04 \uC635\uC158\uC744 \uBCC0\uACBD\uD569\uB2C8\uB2E4." });
     const openBtn = panel.createEl("button", {
       cls: "gemini-chat-action-btn",
-      text: "Open Master of Knowledge settings"
+      text: "\uC9C0\uC2DD \uB9C8\uC2A4\uD130 \uC124\uC815 \uC5F4\uAE30"
     });
     openBtn.addEventListener("click", () => this.plugin.openPluginSettings());
   }
   showWelcomeMessage() {
     this.welcomeEl = this.messagesContainer.createDiv({ cls: "gemini-chat-welcome" });
     this.welcomeEl.createEl("div", { cls: "gemini-chat-welcome-icon", text: "\u{1F9ED}" });
-    this.welcomeEl.createEl("h3", { text: "Agent Workspace" });
-    this.welcomeEl.createEl("p", { text: "Run Antigravity/AGY work from Obsidian using your local CLI OAuth session, then apply the result to notes." });
+    this.welcomeEl.createEl("h3", { text: "\uC5D0\uC774\uC804\uD2B8 \uC791\uC5C5\uACF5\uAC04" });
+    this.welcomeEl.createEl("p", { text: "\uB85C\uCEEC CLI OAuth \uC138\uC158\uC73C\uB85C Obsidian \uC548\uC5D0\uC11C Antigravity/AGY \uC791\uC5C5\uC744 \uC2E4\uD589\uD558\uACE0, \uACB0\uACFC\uB97C \uB178\uD2B8\uC5D0 \uBC18\uC601\uD569\uB2C8\uB2E4." });
     const contextCount = this.plugin.getKnowledgeMarkdownFiles().length;
     if (contextCount === 0) {
       this.welcomeEl.createEl("p", {
         cls: "gemini-chat-welcome-warning",
-        text: "\u26A0\uFE0F No context notes selected yet. Choose context folders in settings to load note excerpts into Agent runs."
+        text: "\u26A0\uFE0F \uC544\uC9C1 \uBB38\uB9E5 \uB178\uD2B8\uAC00 \uC120\uD0DD\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4. \uC124\uC815\uC5D0\uC11C \uBB38\uB9E5 \uD3F4\uB354\uB97C \uC120\uD0DD\uD558\uBA74 \uC5D0\uC774\uC804\uD2B8 \uC2E4\uD589 \uC2DC \uB178\uD2B8 \uBC1C\uCDCC\uAC00 \uD568\uAED8 \uC804\uB2EC\uB429\uB2C8\uB2E4."
       });
     }
     return;
@@ -1521,7 +1521,7 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
     const modeBar = container.createDiv({ cls: "mok-agent-mode-bar" });
     const webSearchButton = modeBar.createEl("button", {
       cls: this.plugin.settings.agentWebSearchEnabled ? "mok-agent-mode-toggle mok-agent-mode-toggle-active" : "mok-agent-mode-toggle",
-      text: this.plugin.settings.agentWebSearchEnabled ? "Web Search On" : "Web Search Off"
+      text: this.plugin.settings.agentWebSearchEnabled ? "\uC6F9 \uAC80\uC0C9 \uCF1C\uC9D0" : "\uC6F9 \uAC80\uC0C9 \uAEBC\uC9D0"
     });
     webSearchButton.setAttr("aria-pressed", String(this.plugin.settings.agentWebSearchEnabled));
     webSearchButton.addEventListener("click", async () => {
@@ -1531,7 +1531,7 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
     });
     modeBar.createSpan({
       cls: "mok-agent-mode-hint",
-      text: this.plugin.settings.agentWebSearchEnabled ? "Agent may use current web sources." : "Agent stays focused on vault context unless asked."
+      text: this.plugin.settings.agentWebSearchEnabled ? "\uD544\uC694\uD558\uBA74 \uCD5C\uC2E0 \uC6F9 \uC790\uB8CC\uB97C \uC0AC\uC6A9\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4." : "\uC694\uCCAD\uC774 \uC5C6\uC73C\uBA74 vault \uBB38\uB9E5\uC5D0 \uC9D1\uC911\uD569\uB2C8\uB2E4."
     });
   }
   async sendMessage() {
@@ -1542,7 +1542,7 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
     const requestInput = this.inputEl;
     const requestButton = this.sendButton;
     if (requestTab !== "agent") {
-      new import_obsidian2.Notice("Chat is disabled in this AGY-only fork. Use the Agent tab.");
+      new import_obsidian2.Notice("\uC774 AGY \uC804\uC6A9 fork\uC5D0\uC11C\uB294 \uC77C\uBC18 \uCC44\uD305\uC744 \uC0AC\uC6A9\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4. \uC5D0\uC774\uC804\uD2B8 \uD0ED\uC744 \uC0AC\uC6A9\uD558\uC138\uC694.");
       return;
     }
     const welcomeEl = this.messagesContainer.querySelector(".gemini-chat-welcome");
@@ -1562,17 +1562,17 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
     this.loadingTab = requestTab;
     requestButton.disabled = requestTab !== "agent";
     requestButton.textContent = requestTab === "agent" ? "\u25A0" : "\u23F3";
-    requestButton.setAttr("aria-label", requestTab === "agent" ? "Stop Agent" : "Running");
+    requestButton.setAttr("aria-label", requestTab === "agent" ? "\uC5D0\uC774\uC804\uD2B8 \uC911\uC9C0" : "\uC2E4\uD589 \uC911");
     const loadingEl = requestContainer.createDiv({ cls: "gemini-chat-loading" });
     loadingEl.createEl("span", { cls: "gemini-chat-loading-dots", text: "\u25CF\u25CF\u25CF" });
     const loadingLabel = loadingEl.createEl("span", {
       cls: "gemini-chat-loading-label",
-      text: requestTab === "agent" ? "Agent running 0s..." : "Thinking..."
+      text: requestTab === "agent" ? "\uC5D0\uC774\uC804\uD2B8 \uC2E4\uD589 \uC911 0\uCD08..." : "\uC0DD\uAC01 \uC911\uC785\uB2C8\uB2E4..."
     });
     const startedAt = Date.now();
     const loadingTimer = requestTab === "agent" ? window.setInterval(() => {
       const seconds = Math.floor((Date.now() - startedAt) / 1e3);
-      loadingLabel.setText(`Agent running ${seconds}s...`);
+      loadingLabel.setText(`\uC5D0\uC774\uC804\uD2B8 \uC2E4\uD589 \uC911 ${seconds}\uCD08...`);
     }, 1e3) : null;
     this.scrollToBottom();
     let streamingMessage = null;
@@ -1581,7 +1581,7 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
     if (requestTab === "agent") {
       streamingMessage = {
         role: "model",
-        content: "Agent is starting...",
+        content: "\uC5D0\uC774\uC804\uD2B8\uB97C \uC2DC\uC791\uD558\uACE0 \uC788\uC2B5\uB2C8\uB2E4...",
         isStreaming: true
       };
       list.push(streamingMessage);
@@ -1591,7 +1591,7 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
       const response = await this.runAgentMessage(text, (chunk, stream) => {
         if (!streamingMessage || stream !== "stdout") return;
         streamedContent += chunk;
-        streamingMessage.content = streamedContent.trim() || "Agent is running...";
+        streamingMessage.content = streamedContent.trim() || "\uC5D0\uC774\uC804\uD2B8\uAC00 \uC2E4\uD589 \uC911\uC785\uB2C8\uB2E4...";
         const now = Date.now();
         if (this.activeTab === requestTab && now - lastStreamRender > 350) {
           lastStreamRender = now;
@@ -1608,7 +1608,7 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
     } catch (error) {
       const errorMessage = {
         role: "model",
-        content: `Error: ${error instanceof Error ? error.message : "Failed to get response"}`
+        content: `\uC624\uB958: ${error instanceof Error ? error.message : "\uC751\uB2F5\uC744 \uAC00\uC838\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4."}`
       };
       if (streamingMessage) {
         streamingMessage.content = errorMessage.content;
@@ -1628,15 +1628,15 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
   }
   stopAgentRun() {
     const stopped = this.plugin.agentService.stop();
-    new import_obsidian2.Notice(stopped ? "Agent run stopped." : "No active Agent run to stop.");
+    new import_obsidian2.Notice(stopped ? "\uC5D0\uC774\uC804\uD2B8 \uC2E4\uD589\uC744 \uC911\uC9C0\uD588\uC2B5\uB2C8\uB2E4." : "\uC911\uC9C0\uD560 \uC5D0\uC774\uC804\uD2B8 \uC2E4\uD589\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.");
   }
   async runAgentMessage(text, onChunk) {
     var _a;
     const result = await this.plugin.agentService.run(text, onChunk);
     const contextLine = result.contextStats ? [
-      `Knowledge context: ${result.contextStats.totalContextNotes} local context notes available; `,
-      `${result.contextStats.loadedExcerptNotes} relevant note excerpts loaded into this Agent run`,
-      result.contextStats.truncatedByBudget ? " (trimmed to fit the Agent prompt)." : "."
+      `\uC9C0\uC2DD \uBB38\uB9E5: \uB85C\uCEEC \uBB38\uB9E5 \uB178\uD2B8 ${result.contextStats.totalContextNotes}\uAC1C \uC0AC\uC6A9 \uAC00\uB2A5; `,
+      `\uC774\uBC88 \uC2E4\uD589\uC5D0 \uAD00\uB828 \uB178\uD2B8 \uBC1C\uCDCC ${result.contextStats.loadedExcerptNotes}\uAC1C \uD3EC\uD568`,
+      result.contextStats.truncatedByBudget ? " (\uC5D0\uC774\uC804\uD2B8 \uD504\uB86C\uD504\uD2B8 \uD55C\uB3C4\uC5D0 \uB9DE\uCDB0 \uC77C\uBD80 \uC0DD\uB7B5\uB428)." : "."
     ].join("") : "";
     const savedNotePath = this.extractVaultNotePath(result.content);
     return {
@@ -1646,11 +1646,11 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
         "",
         "---",
         contextLine,
-        `Agent command: \`${result.command}\``,
-        `Duration: ${(result.durationMs / 1e3).toFixed(1)}s`,
-        result.logPath ? `Agent log: [[${result.logPath}]]` : "",
-        result.agyLogPath ? `AGY log: [[${result.agyLogPath}]]` : "",
-        result.exitCode === 0 ? "" : `Exit code: ${(_a = result.exitCode) != null ? _a : "unknown"}`
+        `\uC5D0\uC774\uC804\uD2B8 \uBA85\uB839: \`${result.command}\``,
+        `\uC2E4\uD589 \uC2DC\uAC04: ${(result.durationMs / 1e3).toFixed(1)}\uCD08`,
+        result.logPath ? `\uC5D0\uC774\uC804\uD2B8 \uB85C\uADF8: [[${result.logPath}]]` : "",
+        result.agyLogPath ? `AGY \uB85C\uADF8: [[${result.agyLogPath}]]` : "",
+        result.exitCode === 0 ? "" : `\uC885\uB8CC \uCF54\uB4DC: ${(_a = result.exitCode) != null ? _a : "\uC54C \uC218 \uC5C6\uC74C"}`
       ].filter(Boolean).join("\n"),
       savedNotePath: savedNotePath || void 0
     };
@@ -1673,14 +1673,14 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
     this.processVaultFileLinks(contentEl);
     if (message.citations && message.citations.length > 0) {
       const citationsEl = contentWrapper.createDiv({ cls: "gemini-chat-citations" });
-      citationsEl.createEl("div", { cls: "gemini-chat-citations-label", text: "\u{1F4CE} Sources:" });
+      citationsEl.createEl("div", { cls: "gemini-chat-citations-label", text: "\u{1F4CE} \uCD9C\uCC98:" });
       for (const citation of message.citations) {
         this.renderCitationPreview(citationsEl, citation);
       }
     }
     if (message.logPath) {
       const logEl = contentWrapper.createDiv({ cls: "gemini-chat-log-link" });
-      logEl.createEl("span", { text: "Log: " });
+      logEl.createEl("span", { text: "\uB85C\uADF8: " });
       const logLink = logEl.createEl("a", { text: message.logPath, href: "#" });
       logLink.addEventListener("click", async (event) => {
         event.preventDefault();
@@ -1689,7 +1689,7 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
     }
     if (message.savedNotePath) {
       const savedEl = contentWrapper.createDiv({ cls: "gemini-chat-log-link" });
-      savedEl.createEl("span", { text: "Saved note: " });
+      savedEl.createEl("span", { text: "\uC800\uC7A5\uB41C \uB178\uD2B8: " });
       const savedLink = savedEl.createEl("a", { text: message.savedNotePath, href: "#" });
       savedLink.addEventListener("click", async (event) => {
         event.preventDefault();
@@ -1770,7 +1770,7 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
       if (!((_a = link.nextElementSibling) == null ? void 0 : _a.hasClass("gemini-chat-find-note-btn"))) {
         const findButton = document.createElement("button");
         findButton.className = "gemini-chat-find-note-btn";
-        findButton.textContent = "Find note";
+        findButton.textContent = "\uB178\uD2B8 \uCC3E\uAE30";
         findButton.addEventListener("click", async (event) => {
           event.preventDefault();
           event.stopPropagation();
@@ -1862,7 +1862,7 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
       if (matchingFile) {
         await this.app.workspace.openLinkText(matchingFile.path, "", true);
       } else {
-        new import_obsidian2.Notice(`Note not found: ${path}`);
+        new import_obsidian2.Notice(`\uB178\uD2B8\uB97C \uCC3E\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4: ${path}`);
       }
     }
   }
@@ -1874,7 +1874,7 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
     const actions = row.createDiv({ cls: "gemini-chat-citation-actions" });
     const openButton = actions.createEl("button", {
       cls: "gemini-chat-citation-open",
-      text: "Find note"
+      text: "\uB178\uD2B8 \uCC3E\uAE30"
     });
     openButton.addEventListener("click", () => this.openNote(citation.sourcePath));
     if (file) {
@@ -1975,14 +1975,14 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
   }
   startNewConversation() {
     if (this.isLoading && this.loadingTab === this.activeTab) {
-      new import_obsidian2.Notice("Stop the current run before starting a new conversation.");
+      new import_obsidian2.Notice("\uC0C8 \uB300\uD654\uB97C \uC2DC\uC791\uD558\uB824\uBA74 \uD604\uC7AC \uC2E4\uD589\uC744 \uBA3C\uC800 \uC911\uC9C0\uD558\uC138\uC694.");
       return;
     }
     if (this.activeTab !== "agent") {
       return;
     }
     this.agentMessages = [];
-    new import_obsidian2.Notice("Started a new Agent conversation.");
+    new import_obsidian2.Notice("\uC0C8 \uC5D0\uC774\uC804\uD2B8 \uB300\uD654\uB97C \uC2DC\uC791\uD588\uC2B5\uB2C8\uB2E4.");
     this.renderActiveTab();
   }
   // Render action buttons (Apply, Copy) for AI responses
@@ -1991,7 +1991,7 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
     const applyContainer = actionsEl.createDiv({ cls: "gemini-chat-apply-container" });
     const applyBtn = applyContainer.createEl("button", {
       cls: "gemini-chat-action-btn gemini-chat-apply-btn",
-      text: "\u{1F4DD} Apply"
+      text: "\u{1F4DD} \uBC18\uC601"
     });
     const dropdownArrow = applyContainer.createEl("button", {
       cls: "gemini-chat-dropdown-arrow",
@@ -2000,11 +2000,11 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
     const dropdownMenu = applyContainer.createDiv({ cls: "gemini-chat-dropdown-menu" });
     dropdownMenu.style.display = "none";
     const menuItems = [
-      { text: "\u{1F4CD} Insert at Cursor", action: () => this.insertAtCursor(message.content, message.citations) },
-      { text: "\u{1F4CE} Append to Current Note", action: () => this.appendToCurrentNote(message.content, message.citations) },
-      { text: "\u{1F4C4} Create New Note", action: () => this.createNewNote(message) },
-      { text: "\u{1F4C2} Select Note...", action: () => this.selectNoteToApply(message.content, message.citations) },
-      { text: `\u{1F9E0} Save to ${this.getWorkspaceSaveLabel()}`, action: () => this.saveToWorkspace(message) }
+      { text: "\u{1F4CD} \uCEE4\uC11C \uC704\uCE58\uC5D0 \uC0BD\uC785", action: () => this.insertAtCursor(message.content, message.citations) },
+      { text: "\u{1F4CE} \uD604\uC7AC \uB178\uD2B8 \uB05D\uC5D0 \uCD94\uAC00", action: () => this.appendToCurrentNote(message.content, message.citations) },
+      { text: "\u{1F4C4} \uC0C8 \uB178\uD2B8 \uB9CC\uB4E4\uAE30", action: () => this.createNewNote(message) },
+      { text: "\u{1F4C2} \uB178\uD2B8 \uC120\uD0DD...", action: () => this.selectNoteToApply(message.content, message.citations) },
+      { text: `\u{1F9E0} ${this.getWorkspaceSaveLabel()}\uC5D0 \uC800\uC7A5`, action: () => this.saveToWorkspace(message) }
     ];
     for (const item of menuItems) {
       const menuItem = dropdownMenu.createEl("div", {
@@ -2043,13 +2043,13 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
     });
     const copyBtn = actionsEl.createEl("button", {
       cls: "gemini-chat-action-btn gemini-chat-copy-btn",
-      text: "\u{1F4CB} Copy"
+      text: "\u{1F4CB} \uBCF5\uC0AC"
     });
     copyBtn.addEventListener("click", async () => {
       await navigator.clipboard.writeText(message.content);
-      copyBtn.textContent = "\u2713 Copied!";
+      copyBtn.textContent = "\u2713 \uBCF5\uC0AC\uB428";
       setTimeout(() => {
-        copyBtn.textContent = "\u{1F4CB} Copy";
+        copyBtn.textContent = "\u{1F4CB} \uBCF5\uC0AC";
       }, 2e3);
     });
   }
@@ -2066,7 +2066,7 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
       hour: "2-digit",
       minute: "2-digit"
     });
-    const label = "Agent Result";
+    const label = "\uC5D0\uC774\uC804\uD2B8 \uACB0\uACFC";
     let result = `
 
 ---
@@ -2074,7 +2074,7 @@ Degree ${node.degree || 0} \xB7 PageRank ${Math.round((node.pageRank || 0) * 100
 
 ${content}`;
     if (citations && citations.length > 0) {
-      result += "\n\n**Sources:**\n";
+      result += "\n\n**\uCD9C\uCC98:**\n";
       for (const citation of citations) {
         result += `- [[${citation.sourcePath}]]
 `;
@@ -2091,17 +2091,17 @@ ${content}`;
     const now = /* @__PURE__ */ new Date();
     const dateStr = now.toISOString().slice(0, 10);
     const timeStr = now.toTimeString().slice(0, 5).replace(":", "-");
-    const fileName = `${folder}/Master of Knowledge ${dateStr} ${timeStr}.md`;
+    const fileName = `${folder}/\uC9C0\uC2DD \uB9C8\uC2A4\uD130 ${dateStr} ${timeStr}.md`;
     const formattedContent = this.formatContentWithMetadata(message.content, message.citations);
     try {
       const file = await this.app.vault.create(fileName, formattedContent);
       message.savedNotePath = file.path;
       await this.app.workspace.openLinkText(file.path, "", true);
-      new import_obsidian2.Notice(`\u2705 Saved to ${file.path}`);
+      new import_obsidian2.Notice(`\u2705 \uC800\uC7A5\uD588\uC2B5\uB2C8\uB2E4: ${file.path}`);
       this.renderActiveTab();
     } catch (error) {
-      new import_obsidian2.Notice("Failed to save workspace note.");
-      console.error("Workspace save error:", error);
+      new import_obsidian2.Notice("\uC791\uC5C5\uACF5\uAC04 \uB178\uD2B8\uB97C \uC800\uC7A5\uD558\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.");
+      console.error("\uC791\uC5C5\uACF5\uAC04 \uC800\uC7A5 \uC624\uB958:", error);
     }
   }
   // Insert at cursor position in active editor
@@ -2110,33 +2110,33 @@ ${content}`;
     const activeView = this.app.workspace.getActiveViewOfType(import_obsidian2.ItemView);
     const markdownView = this.app.workspace.getActiveFile();
     if (!markdownView) {
-      new import_obsidian2.Notice("No active note. Please open a note first.");
+      new import_obsidian2.Notice("\uD65C\uC131 \uB178\uD2B8\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. \uBA3C\uC800 \uB178\uD2B8\uB97C \uC5F4\uC5B4 \uC8FC\uC138\uC694.");
       return;
     }
     const leaf = this.app.workspace.getMostRecentLeaf();
     if (!leaf) {
-      new import_obsidian2.Notice("No active editor found.");
+      new import_obsidian2.Notice("\uD65C\uC131 \uD3B8\uC9D1\uAE30\uB97C \uCC3E\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.");
       return;
     }
     const editor = (_a = leaf.view) == null ? void 0 : _a.editor;
     if (!editor) {
-      new import_obsidian2.Notice("No editor found. Please open a note in edit mode.");
+      new import_obsidian2.Notice("\uD3B8\uC9D1\uAE30\uB97C \uCC3E\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. \uB178\uD2B8\uB97C \uD3B8\uC9D1 \uBAA8\uB4DC\uB85C \uC5F4\uC5B4 \uC8FC\uC138\uC694.");
       return;
     }
     const formattedContent = this.formatContentWithMetadata(content, citations);
     editor.replaceSelection(formattedContent);
-    new import_obsidian2.Notice("\u2705 Content inserted at cursor!");
+    new import_obsidian2.Notice("\u2705 \uCEE4\uC11C \uC704\uCE58\uC5D0 \uB0B4\uC6A9\uC744 \uC0BD\uC785\uD588\uC2B5\uB2C8\uB2E4.");
   }
   // Append to current note
   async appendToCurrentNote(content, citations) {
     const activeFile = this.app.workspace.getActiveFile();
     if (!activeFile) {
-      new import_obsidian2.Notice("No active note. Please open a note first.");
+      new import_obsidian2.Notice("\uD65C\uC131 \uB178\uD2B8\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. \uBA3C\uC800 \uB178\uD2B8\uB97C \uC5F4\uC5B4 \uC8FC\uC138\uC694.");
       return;
     }
     const formattedContent = this.formatContentWithMetadata(content, citations);
     await this.app.vault.append(activeFile, formattedContent);
-    new import_obsidian2.Notice(`\u2705 Content appended to ${activeFile.name}!`);
+    new import_obsidian2.Notice(`\u2705 ${activeFile.name}\uC5D0 \uB0B4\uC6A9\uC744 \uCD94\uAC00\uD588\uC2B5\uB2C8\uB2E4.`);
   }
   // Create new note with content
   async createNewNote(message) {
@@ -2144,18 +2144,18 @@ ${content}`;
     const dateStr = now.toISOString().slice(0, 10);
     const timeStr = now.toTimeString().slice(0, 5).replace(":", "-");
     const folder = this.activeTab === "agent" ? await this.plugin.ensureVaultFolder(this.plugin.settings.agentOutputFolder) : "";
-    const baseName = "Agent Result";
+    const baseName = "\uC5D0\uC774\uC804\uD2B8 \uACB0\uACFC";
     const fileName = folder ? `${folder}/${baseName} ${dateStr} ${timeStr}.md` : `${baseName} ${dateStr} ${timeStr}.md`;
     const formattedContent = this.formatContentWithMetadata(message.content, message.citations);
     try {
       const newFile = await this.app.vault.create(fileName, formattedContent);
       message.savedNotePath = newFile.path;
       await this.app.workspace.openLinkText(newFile.path, "", true);
-      new import_obsidian2.Notice(`\u2705 Created new note: ${newFile.path}`);
+      new import_obsidian2.Notice(`\u2705 \uC0C8 \uB178\uD2B8\uB97C \uB9CC\uB4E4\uC5C8\uC2B5\uB2C8\uB2E4: ${newFile.path}`);
       this.renderActiveTab();
     } catch (error) {
-      new import_obsidian2.Notice("Failed to create note. Please try again.");
-      console.error("Create note error:", error);
+      new import_obsidian2.Notice("\uB178\uD2B8\uB97C \uB9CC\uB4E4\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694.");
+      console.error("\uB178\uD2B8 \uC0DD\uC131 \uC624\uB958:", error);
     }
   }
   // Open note selector modal
@@ -2163,7 +2163,7 @@ ${content}`;
     const modal = new NoteSelectorModal(this.app, async (file) => {
       const formattedContent = this.formatContentWithMetadata(content, citations);
       await this.app.vault.append(file, formattedContent);
-      new import_obsidian2.Notice(`\u2705 Content appended to ${file.name}!`);
+      new import_obsidian2.Notice(`\u2705 ${file.name}\uC5D0 \uB0B4\uC6A9\uC744 \uCD94\uAC00\uD588\uC2B5\uB2C8\uB2E4.`);
     });
     modal.open();
   }
@@ -2180,6 +2180,7 @@ var import_child_process = require("child_process");
 var import_fs = require("fs");
 var import_os = require("os");
 var import_path = require("path");
+var import_string_decoder = require("string_decoder");
 var AgentService = class {
   constructor(plugin) {
     this.plugin = plugin;
@@ -2219,7 +2220,7 @@ var AgentService = class {
       const output = [stdout.trim(), stderr.trim() ? `
 
 ---
-Agent stderr:
+\uC5D0\uC774\uC804\uD2B8 stderr:
 ${stderr.trim()}` : ""].join("").trim();
       await this.appendAgentLog(logRef.vaultPath, {
         event: "complete",
@@ -2227,7 +2228,7 @@ ${stderr.trim()}` : ""].join("").trim();
         durationMs: Date.now() - started
       });
       return {
-        content: output || "Agent completed without text output.",
+        content: output || "\uC5D0\uC774\uC804\uD2B8\uAC00 \uD14D\uC2A4\uD2B8 \uCD9C\uB825 \uC5C6\uC774 \uC644\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
         command: `${resolvedCommand} --print`,
         exitCode: 0,
         durationMs: Date.now() - started,
@@ -2242,7 +2243,7 @@ ${stderr.trim()}` : ""].join("").trim();
           durationMs: Date.now() - started
         });
         return {
-          content: "Agent run stopped by user.",
+          content: "\uC0AC\uC6A9\uC790\uAC00 \uC5D0\uC774\uC804\uD2B8 \uC2E4\uD589\uC744 \uC911\uC9C0\uD588\uC2B5\uB2C8\uB2E4.",
           command: `${resolvedCommand || command} --print`,
           exitCode: null,
           durationMs: Date.now() - started,
@@ -2253,16 +2254,16 @@ ${stderr.trim()}` : ""].join("").trim();
       }
       const stdout = String((error == null ? void 0 : error.stdout) || "").trim();
       const stderr = String((error == null ? void 0 : error.stderr) || "").trim();
-      const message = stderr || stdout || (error == null ? void 0 : error.message) || "Unknown agent error";
+      const message = stderr || stdout || (error == null ? void 0 : error.message) || "\uC54C \uC218 \uC5C6\uB294 \uC5D0\uC774\uC804\uD2B8 \uC624\uB958";
       await this.appendAgentLog(logRef.vaultPath, {
         event: "failed",
         errorCode: (_a = error == null ? void 0 : error.code) != null ? _a : null,
         message,
         durationMs: Date.now() - started
       });
-      new import_obsidian3.Notice("Agent run failed. Check the result card for details.");
+      new import_obsidian3.Notice("\uC5D0\uC774\uC804\uD2B8 \uC2E4\uD589\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4. \uACB0\uACFC \uCE74\uB4DC\uB97C \uD655\uC778\uD558\uC138\uC694.");
       return {
-        content: `Agent run failed.
+        content: `\uC5D0\uC774\uC804\uD2B8 \uC2E4\uD589\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.
 
 ${message}`,
         command: `${resolvedCommand || command} --print`,
@@ -2297,7 +2298,7 @@ ${message}`,
     const workspaceFolder = this.plugin.settings.workspaceFolder;
     const agentOutputFolder = await this.plugin.ensureVaultFolder(this.plugin.settings.agentOutputFolder);
     const trustMode = this.plugin.settings.agentPermissionMode;
-    const scope = this.plugin.settings.syncFolders.join(", ") || "No context folders selected";
+    const scope = this.plugin.settings.syncFolders.join(", ") || "\uC120\uD0DD\uB41C \uBB38\uB9E5 \uD3F4\uB354 \uC5C6\uC74C";
     const webSearch = this.plugin.settings.agentWebSearchEnabled;
     const obsidianSkill = await this.getObsidianSkillContext();
     const contextNotes = await this.buildLocalNotesContext(prompt);
@@ -2307,36 +2308,39 @@ ${message}`,
       try {
         const content = await this.plugin.app.vault.read(activeFile);
         activeNoteContent = content.length > 6e3 ? `${content.slice(0, 6e3)}
-...[active note truncated]` : content;
+...[\uD604\uC7AC \uB178\uD2B8 \uBC1C\uCDCC \uC0DD\uB7B5]` : content;
       } catch (e) {
         activeNoteContent = "";
       }
     }
     return [
-      "You are running inside the Master of Knowledge Obsidian plugin.",
-      `Vault workspace path: ${this.plugin.getVaultPath()}.`,
-      `Trust mode: ${trustMode}.`,
-      `Web search mode: ${webSearch ? "enabled" : "disabled"}.`,
-      `Workspace folder for generated artifacts: ${workspaceFolder}.`,
-      `Agent output folder for generated notes: ${agentOutputFolder}.`,
-      "All generated files must stay inside the current Obsidian vault. Treat the Agent output folder as a vault-relative path, not an external filesystem destination.",
-      "If you create a note file, save it inside the Agent output folder and include its vault-relative markdown link in the response. If you only draft text in chat, do not claim that a file was saved.",
+      "\uB2F9\uC2E0\uC740 \uC9C0\uC2DD \uB9C8\uC2A4\uD130 AGY Obsidian \uD50C\uB7EC\uADF8\uC778 \uC548\uC5D0\uC11C \uC2E4\uD589\uB418\uB294 \uC5D0\uC774\uC804\uD2B8\uC785\uB2C8\uB2E4.",
+      "\uC0AC\uC6A9\uC790\uAC00 \uC77D\uB294 \uBAA8\uB4E0 \uC751\uB2F5, \uC124\uBA85, \uC81C\uBAA9, \uBAA9\uB85D, \uB178\uD2B8 \uBCF8\uBB38\uC740 \uD55C\uAD6D\uC5B4\uB85C \uC791\uC131\uD558\uC138\uC694.",
+      "\uBA85\uB839\uC5B4, \uD30C\uC77C\uBA85, \uBAA8\uB378\uBA85, API\uBA85, vault \uACBD\uB85C, \uCF54\uB4DC \uC2DD\uBCC4\uC790 \uAC19\uC740 \uACE0\uC720\uBA85\uC0AC\uB294 \uC6D0\uBB38\uC744 \uC720\uC9C0\uD560 \uC218 \uC788\uC9C0\uB9CC, \uC77C\uBC18 \uC124\uBA85 \uBB38\uC7A5\uC5D0\uB294 \uC601\uC5B4\uB97C \uC11E\uC9C0 \uB9C8\uC138\uC694.",
+      "\uD55C\uAE00\uC774 \uAE68\uC9C0\uC9C0 \uC54A\uB3C4\uB85D UTF-8 \uAE30\uC900\uC758 \uC815\uC0C1 \uD55C\uAD6D\uC5B4 \uBB38\uC7A5\uC73C\uB85C \uCD9C\uB825\uD558\uC138\uC694. \uAE68\uC9C4 \uBB38\uC790\uB098 \uAC80\uC740 \uBB3C\uC74C\uD45C \uBAA8\uC591 \uB300\uCCB4 \uBB38\uC790\uAC00 \uBCF4\uC774\uBA74 \uAC19\uC740 \uB73B\uC758 \uC790\uC5F0\uC2A4\uB7EC\uC6B4 \uD55C\uAD6D\uC5B4\uB85C \uB2E4\uC2DC \uC791\uC131\uD558\uC138\uC694.",
+      `Vault \uC791\uC5C5\uACF5\uAC04 \uACBD\uB85C: ${this.plugin.getVaultPath()}.`,
+      `\uC2E0\uB8B0 \uBAA8\uB4DC: ${trustMode}.`,
+      `\uC6F9 \uAC80\uC0C9 \uBAA8\uB4DC: ${webSearch ? "\uCF1C\uC9D0" : "\uAEBC\uC9D0"}.`,
+      `\uC0DD\uC131 \uC0B0\uCD9C\uBB3C \uC791\uC5C5\uACF5\uAC04 \uD3F4\uB354: ${workspaceFolder}.`,
+      `\uC5D0\uC774\uC804\uD2B8 \uC0DD\uC131 \uB178\uD2B8 \uD3F4\uB354: ${agentOutputFolder}.`,
+      "\uC0DD\uC131 \uD30C\uC77C\uC740 \uBC18\uB4DC\uC2DC \uD604\uC7AC Obsidian vault \uC548\uC5D0 \uB450\uC138\uC694. \uC5D0\uC774\uC804\uD2B8 \uACB0\uACFC \uD3F4\uB354\uB294 \uC678\uBD80 \uD30C\uC77C \uC2DC\uC2A4\uD15C \uACBD\uB85C\uAC00 \uC544\uB2C8\uB77C vault \uC0C1\uB300 \uACBD\uB85C\uB85C \uCDE8\uAE09\uD569\uB2C8\uB2E4.",
+      "\uB178\uD2B8 \uD30C\uC77C\uC744 \uB9CC\uB4E4\uBA74 \uC5D0\uC774\uC804\uD2B8 \uACB0\uACFC \uD3F4\uB354 \uC548\uC5D0 \uC800\uC7A5\uD558\uACE0, \uC751\uB2F5\uC5D0\uB294 vault \uC0C1\uB300 Markdown \uB9C1\uD06C\uB97C \uD3EC\uD568\uD558\uC138\uC694. \uCC44\uD305\uC5D0 \uCD08\uC548\uB9CC \uC791\uC131\uD588\uB2E4\uBA74 \uD30C\uC77C\uC744 \uC800\uC7A5\uD588\uB2E4\uACE0 \uB9D0\uD558\uC9C0 \uB9C8\uC138\uC694.",
       obsidianSkill,
-      `Selected knowledge folders: ${scope}.`,
-      activeFile ? `Active note path: ${activeFile.path}.` : "No active note is open.",
-      activeNoteContent ? `Active note content excerpt:
+      `\uC120\uD0DD\uB41C \uC9C0\uC2DD \uD3F4\uB354: ${scope}.`,
+      activeFile ? `\uD604\uC7AC \uC5F4\uB9B0 \uB178\uD2B8 \uACBD\uB85C: ${activeFile.path}.` : "\uD604\uC7AC \uC5F4\uB9B0 \uB178\uD2B8\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.",
+      activeNoteContent ? `\uD604\uC7AC \uB178\uD2B8 \uB0B4\uC6A9 \uBC1C\uCDCC:
 ${activeNoteContent}` : "",
-      `Total local context notes available in selected folders: ${contextNotes.stats.totalContextNotes}.`,
-      `Direct excerpts loaded into this prompt: ${contextNotes.stats.loadedExcerptNotes}.`,
-      "The excerpts below are a relevance-ranked working set, not the complete knowledge base. Do not describe the total knowledge base as only the excerpt count.",
-      "Use the loaded excerpts first, and use the vault workspace path plus selected knowledge folders when you need to inspect more notes.",
-      "Local note excerpts loaded for this request. Cite note paths when you use them:",
+      `\uC120\uD0DD\uB41C \uD3F4\uB354\uC5D0\uC11C \uC0AC\uC6A9 \uAC00\uB2A5\uD55C \uB85C\uCEEC \uBB38\uB9E5 \uB178\uD2B8 \uC218: ${contextNotes.stats.totalContextNotes}.`,
+      `\uC774\uBC88 \uD504\uB86C\uD504\uD2B8\uC5D0 \uC9C1\uC811 \uD3EC\uD568\uB41C \uBC1C\uCDCC \uB178\uD2B8 \uC218: ${contextNotes.stats.loadedExcerptNotes}.`,
+      "\uC544\uB798 \uBC1C\uCDCC\uB294 \uAD00\uB828\uB3C4 \uAE30\uC900 \uC791\uC5C5 \uC138\uD2B8\uC774\uBA70 \uC804\uCCB4 \uC9C0\uC2DD \uBCA0\uC774\uC2A4\uAC00 \uC544\uB2D9\uB2C8\uB2E4. \uC804\uCCB4 \uC9C0\uC2DD \uBCA0\uC774\uC2A4\uB97C \uBC1C\uCDCC \uAC1C\uC218\uB9CC\uC73C\uB85C \uC124\uBA85\uD558\uC9C0 \uB9C8\uC138\uC694.",
+      "\uBA3C\uC800 \uD3EC\uD568\uB41C \uBC1C\uCDCC\uB97C \uC0AC\uC6A9\uD558\uACE0, \uB354 \uB9CE\uC740 \uB178\uD2B8 \uD655\uC778\uC774 \uD544\uC694\uD558\uBA74 vault \uC791\uC5C5\uACF5\uAC04 \uACBD\uB85C\uC640 \uC120\uD0DD\uB41C \uC9C0\uC2DD \uD3F4\uB354\uB97C \uD65C\uC6A9\uD558\uC138\uC694.",
+      "\uC774\uBC88 \uC694\uCCAD\uC5D0 \uD3EC\uD568\uB41C \uB85C\uCEEC \uB178\uD2B8 \uBC1C\uCDCC\uC785\uB2C8\uB2E4. \uADFC\uAC70\uB85C \uC0AC\uC6A9\uD558\uBA74 \uB178\uD2B8 \uACBD\uB85C\uB97C \uD45C\uC2DC\uD558\uC138\uC694:",
       contextNotes.context,
-      webSearch ? "Use web search when current external information would improve the answer, and return markdown with clear web and vault sources." : "Do not use web search unless the user explicitly asks for it in the prompt. Prefer vault evidence.",
-      "Answer primarily from the local note context. If the answer is not supported by local notes, say so clearly.",
-      "Do not modify user notes directly unless the prompt explicitly asks for it. Prefer a preview-ready result.",
+      webSearch ? "\uCD5C\uC2E0 \uC678\uBD80 \uC815\uBCF4\uAC00 \uB2F5\uBCC0 \uD488\uC9C8\uC744 \uB192\uC77C \uB54C \uC6F9 \uAC80\uC0C9\uC744 \uC0AC\uC6A9\uD558\uACE0, \uC6F9 \uCD9C\uCC98\uC640 vault \uCD9C\uCC98\uB97C \uBA85\uD655\uD788 \uAD6C\uBD84\uD55C Markdown\uC73C\uB85C \uB2F5\uD558\uC138\uC694." : "\uC0AC\uC6A9\uC790\uAC00 \uBA85\uC2DC\uC801\uC73C\uB85C \uC694\uCCAD\uD558\uC9C0 \uC54A\uB294 \uD55C \uC6F9 \uAC80\uC0C9\uC744 \uC0AC\uC6A9\uD558\uC9C0 \uB9D0\uACE0, vault \uADFC\uAC70\uB97C \uC6B0\uC120\uD558\uC138\uC694.",
+      "\uAC00\uB2A5\uD558\uBA74 \uB85C\uCEEC \uB178\uD2B8 \uBB38\uB9E5\uC744 \uC6B0\uC120\uD574 \uB2F5\uD558\uC138\uC694. \uB85C\uCEEC \uB178\uD2B8\uB85C \uB4B7\uBC1B\uCE68\uB418\uC9C0 \uC54A\uC73C\uBA74 \uADF8 \uC0AC\uC2E4\uC744 \uBD84\uBA85\uD788 \uB9D0\uD558\uC138\uC694.",
+      "\uC0AC\uC6A9\uC790\uAC00 \uBA85\uC2DC\uC801\uC73C\uB85C \uC694\uCCAD\uD558\uC9C0 \uC54A\uB294 \uD55C \uC0AC\uC6A9\uC790 \uB178\uD2B8\uB97C \uC9C1\uC811 \uC218\uC815\uD558\uC9C0 \uB9D0\uACE0, \uBA3C\uC800 \uAC80\uD1A0 \uAC00\uB2A5\uD55C \uACB0\uACFC\uB97C \uC81C\uC2DC\uD558\uC138\uC694.",
       "",
-      "User request:",
+      "\uC0AC\uC6A9\uC790 \uC694\uCCAD:",
       prompt
     ].join("\n");
   }
@@ -2349,17 +2353,17 @@ ${activeNoteContent}` : "",
     const file = this.plugin.app.vault.getAbstractFileByPath(path);
     if (!(file instanceof import_obsidian3.TFile)) {
       return [
-        "Obsidian writing skill is enabled, but the skill file is not installed yet.",
-        "Default behavior: write valid Obsidian Markdown, save generated notes inside the Agent output folder, return vault-relative note links, and do not claim a save unless the file exists."
+        "Obsidian \uC791\uC131 \uC2A4\uD0AC\uC774 \uCF1C\uC838 \uC788\uC9C0\uB9CC \uC2A4\uD0AC \uD30C\uC77C\uC740 \uC544\uC9C1 \uC124\uCE58\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.",
+        "\uAE30\uBCF8 \uB3D9\uC791: \uC62C\uBC14\uB978 Obsidian Markdown\uC744 \uC791\uC131\uD558\uACE0, \uC0DD\uC131 \uB178\uD2B8\uB294 \uC5D0\uC774\uC804\uD2B8 \uACB0\uACFC \uD3F4\uB354\uC5D0 \uC800\uC7A5\uD558\uBA70, vault \uC0C1\uB300 \uB178\uD2B8 \uB9C1\uD06C\uB97C \uBC18\uD658\uD558\uACE0, \uC2E4\uC81C \uD30C\uC77C\uC774 \uC5C6\uC73C\uBA74 \uC800\uC7A5\uD588\uB2E4\uACE0 \uB9D0\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4."
       ].join("\n");
     }
     try {
       const content = await this.plugin.app.vault.read(file);
       return [
-        "Obsidian writing skill loaded. Follow it by default for note-writing tasks:",
+        "Obsidian \uC791\uC131 \uC2A4\uD0AC\uC744 \uBD88\uB7EC\uC654\uC2B5\uB2C8\uB2E4. \uB178\uD2B8 \uC791\uC131 \uC791\uC5C5\uC5D0\uC11C\uB294 \uAE30\uBCF8\uC801\uC73C\uB85C \uC774 \uC9C0\uC2DC\uB97C \uB530\uB974\uC138\uC694:",
         `--- ${path} ---`,
         content.length > 5e3 ? `${content.slice(0, 5e3)}
-...[skill truncated]` : content
+...[\uC2A4\uD0AC \uBC1C\uCDCC \uC0DD\uB7B5]` : content
       ].join("\n");
     } catch (e) {
       return "";
@@ -2374,7 +2378,7 @@ ${activeNoteContent}` : "",
     for (const file of candidates) {
       try {
         const content = await this.plugin.app.vault.read(file);
-        const truncated = content.length > 1800 ? `${content.slice(0, 1800)}...[truncated]` : content;
+        const truncated = content.length > 1800 ? `${content.slice(0, 1800)}...[\uBC1C\uCDCC \uC0DD\uB7B5]` : content;
         const block = `--- ${file.path} ---
 ${truncated}
 `;
@@ -2385,7 +2389,7 @@ ${truncated}
         contexts.push(block);
         totalLength += block.length;
       } catch (error) {
-        console.warn(`Failed to read local note for Agent context: ${file.path}`, error);
+        console.warn(`\uC5D0\uC774\uC804\uD2B8 \uBB38\uB9E5\uC6A9 \uB85C\uCEEC \uB178\uD2B8\uB97C \uC77D\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4: ${file.path}`, error);
       }
     }
     const stats = {
@@ -2399,7 +2403,7 @@ ${truncated}
       }).filter((path) => !!path)
     };
     return {
-      context: contexts.join("\n") || "No local context notes are available in the selected context folders.",
+      context: contexts.join("\n") || "\uC120\uD0DD\uB41C \uBB38\uB9E5 \uD3F4\uB354\uC5D0\uC11C \uC0AC\uC6A9\uD560 \uC218 \uC788\uB294 \uB85C\uCEEC \uBB38\uB9E5 \uB178\uD2B8\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.",
       stats
     };
   }
@@ -2482,10 +2486,14 @@ ${content.slice(0, 4e3)}`.toLowerCase();
       let settled = false;
       const maxBuffer = 1024 * 1024 * 8;
       const timeoutMs = Math.max(3e4, this.plugin.settings.agentTimeoutSeconds * 1e3);
+      const stdoutDecoder = new import_string_decoder.StringDecoder("utf8");
+      const stderrDecoder = new import_string_decoder.StringDecoder("utf8");
       const child = (0, import_child_process.spawn)(command, args, {
         cwd: this.plugin.getVaultPath(),
         env: {
           ...process.env,
+          LANG: process.env.LANG || "ko_KR.UTF-8",
+          LC_ALL: process.env.LC_ALL || process.env.LANG || "ko_KR.UTF-8",
           ...this.parseEnv(this.plugin.settings.agentEnvironment)
         },
         shell: process.platform === "win32" && /\.(cmd|bat)$/i.test(command),
@@ -2498,9 +2506,25 @@ ${content.slice(0, 4e3)}`.toLowerCase();
         pid: (_a = child.pid) != null ? _a : null,
         stdinClosed: true
       });
+      const recordChunk = (chunk, stream) => {
+        if (!chunk) return;
+        if (stream === "stdout") stdout += chunk;
+        else stderr += chunk;
+        onChunk == null ? void 0 : onChunk(chunk, stream);
+        void this.appendAgentLog(logPath, { event: stream, chunk });
+        if (stdout.length + stderr.length > maxBuffer) {
+          void this.appendAgentLog(logPath, { event: "max_buffer", maxBuffer });
+          child.kill();
+        }
+      };
+      const flushDecoders = () => {
+        recordChunk(stdoutDecoder.end(), "stdout");
+        recordChunk(stderrDecoder.end(), "stderr");
+      };
       const timer = window.setTimeout(() => {
         settled = true;
         child.kill();
+        flushDecoders();
         if (this.activeChild === child) this.activeChild = null;
         void this.appendAgentLog(logPath, {
           event: "timeout",
@@ -2508,35 +2532,22 @@ ${content.slice(0, 4e3)}`.toLowerCase();
           stdoutLength: stdout.length,
           stderrLength: stderr.length
         });
-        reject(Object.assign(new Error(`Agent timed out after ${Math.round(timeoutMs / 1e3)}s`), {
+        reject(Object.assign(new Error(`\uC5D0\uC774\uC804\uD2B8\uAC00 ${Math.round(timeoutMs / 1e3)}\uCD08 \uC548\uC5D0 \uB05D\uB098\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.`), {
           code: "ETIMEDOUT",
           stdout,
           stderr
         }));
       }, timeoutMs);
       (_b = child.stdout) == null ? void 0 : _b.on("data", (data) => {
-        const chunk = data.toString();
-        stdout += chunk;
-        onChunk == null ? void 0 : onChunk(chunk, "stdout");
-        void this.appendAgentLog(logPath, { event: "stdout", chunk });
-        if (stdout.length + stderr.length > maxBuffer) {
-          void this.appendAgentLog(logPath, { event: "max_buffer", maxBuffer });
-          child.kill();
-        }
+        recordChunk(stdoutDecoder.write(data), "stdout");
       });
       (_c = child.stderr) == null ? void 0 : _c.on("data", (data) => {
-        const chunk = data.toString();
-        stderr += chunk;
-        onChunk == null ? void 0 : onChunk(chunk, "stderr");
-        void this.appendAgentLog(logPath, { event: "stderr", chunk });
-        if (stdout.length + stderr.length > maxBuffer) {
-          void this.appendAgentLog(logPath, { event: "max_buffer", maxBuffer });
-          child.kill();
-        }
+        recordChunk(stderrDecoder.write(data), "stderr");
       });
       child.on("error", (error) => {
         if (settled) return;
         settled = true;
+        flushDecoders();
         if (this.activeChild === child) this.activeChild = null;
         window.clearTimeout(timer);
         void this.appendAgentLog(logPath, {
@@ -2547,7 +2558,7 @@ ${content.slice(0, 4e3)}`.toLowerCase();
         });
         if (this.stopWasRequested) {
           this.stopWasRequested = false;
-          reject(Object.assign(new Error("Agent run stopped by user."), {
+          reject(Object.assign(new Error("\uC0AC\uC6A9\uC790\uAC00 \uC5D0\uC774\uC804\uD2B8 \uC2E4\uD589\uC744 \uC911\uC9C0\uD588\uC2B5\uB2C8\uB2E4."), {
             code: "EAGENTSTOPPED",
             stdout,
             stderr
@@ -2559,6 +2570,7 @@ ${content.slice(0, 4e3)}`.toLowerCase();
       child.on("close", (code) => {
         if (settled) return;
         settled = true;
+        flushDecoders();
         if (this.activeChild === child) this.activeChild = null;
         window.clearTimeout(timer);
         void this.appendAgentLog(logPath, {
@@ -2569,7 +2581,7 @@ ${content.slice(0, 4e3)}`.toLowerCase();
         });
         if (this.stopWasRequested) {
           this.stopWasRequested = false;
-          reject(Object.assign(new Error("Agent run stopped by user."), {
+          reject(Object.assign(new Error("\uC0AC\uC6A9\uC790\uAC00 \uC5D0\uC774\uC804\uD2B8 \uC2E4\uD589\uC744 \uC911\uC9C0\uD588\uC2B5\uB2C8\uB2E4."), {
             code: "EAGENTSTOPPED",
             stdout,
             stderr
@@ -2580,7 +2592,7 @@ ${content.slice(0, 4e3)}`.toLowerCase();
           resolve({ stdout, stderr });
           return;
         }
-        reject(Object.assign(new Error(`Agent exited with code ${code != null ? code : "unknown"}`), {
+        reject(Object.assign(new Error(`\uC5D0\uC774\uC804\uD2B8\uAC00 \uC885\uB8CC \uCF54\uB4DC ${code != null ? code : "\uC54C \uC218 \uC5C6\uC74C"}\uB85C \uC885\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`), {
           code,
           stdout,
           stderr
@@ -2603,7 +2615,7 @@ ${content.slice(0, 4e3)}`.toLowerCase();
       webSearchEnabled: this.plugin.settings.agentWebSearchEnabled,
       syncFolders: this.plugin.settings.syncFolders,
       contextStats: this.lastContextStats,
-      promptPreview: prompt.length > 500 ? `${prompt.slice(0, 500)}...[truncated]` : prompt,
+      promptPreview: prompt.length > 500 ? `${prompt.slice(0, 500)}...[\uBC1C\uCDCC \uC0DD\uB7B5]` : prompt,
       agyLogPath: agyVaultPath
     };
     await this.plugin.app.vault.create(vaultPath, `${JSON.stringify(initial)}
@@ -2620,7 +2632,7 @@ ${content.slice(0, 4e3)}`.toLowerCase();
       })}
 `);
     } catch (error) {
-      console.warn("Failed to append Agent log:", error);
+      console.warn("\uC5D0\uC774\uC804\uD2B8 \uB85C\uADF8\uB97C \uCD94\uAC00\uD558\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4:", error);
     }
   }
   redactArgsForLog(args) {
@@ -2700,10 +2712,10 @@ ${content.slice(0, 4e3)}`.toLowerCase();
   }
   getMissingCommandMessage(command) {
     return [
-      `Could not find the Agent CLI command "${command}".`,
-      "If Obsidian was opened from Finder, Dock, or Start Menu, it may not inherit your shell PATH.",
-      "Open Settings > Master of Knowledge > Agent Workspace and click Auto-detect, or set Antigravity CLI Path to the full command path.",
-      process.platform === "win32" ? "On Windows it is often agy.exe in PATH, %LOCALAPPDATA%\\Programs\\Antigravity, or %APPDATA%\\npm." : `On macOS it is often: ${(0, import_os.homedir)()}/.local/bin/agy`
+      `\uC5D0\uC774\uC804\uD2B8 CLI \uBA85\uB839 "${command}"\uC744 \uCC3E\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.`,
+      "Obsidian\uC744 Finder, Dock, \uC2DC\uC791 \uBA54\uB274\uC5D0\uC11C \uC5F4\uC5C8\uB2E4\uBA74 \uC178 PATH\uB97C \uC0C1\uC18D\uD558\uC9C0 \uBABB\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.",
+      "\uC124\uC815 > \uC9C0\uC2DD \uB9C8\uC2A4\uD130 AGY > \uC5D0\uC774\uC804\uD2B8 \uC2E4\uD589\uC5D0\uC11C \uC790\uB3D9 \uCC3E\uAE30\uB97C \uB204\uB974\uAC70\uB098 Antigravity CLI \uACBD\uB85C\uC5D0 \uC804\uCCB4 \uACBD\uB85C\uB97C \uC785\uB825\uD558\uC138\uC694.",
+      process.platform === "win32" ? "Windows\uC5D0\uC11C\uB294 \uBCF4\uD1B5 PATH\uC758 agy.exe, %LOCALAPPDATA%\\Programs\\Antigravity, \uB610\uB294 %APPDATA%\\npm \uC704\uCE58\uC5D0 \uC788\uC2B5\uB2C8\uB2E4." : `macOS\uC5D0\uC11C\uB294 \uBCF4\uD1B5 \uB2E4\uC74C \uC704\uCE58 \uC911 \uD558\uB098\uC785\uB2C8\uB2E4: ${(0, import_os.homedir)()}/.local/bin/agy \uB610\uB294 /opt/homebrew/bin/agy`
     ].join("\n");
   }
 };
@@ -2711,32 +2723,32 @@ ${content.slice(0, 4e3)}`.toLowerCase();
 // src/main.ts
 var MokAgyPlugin = class extends import_obsidian4.Plugin {
   async onload() {
-    console.log("Loading Master of Knowledge AGY Plugin");
+    console.log("\uC9C0\uC2DD \uB9C8\uC2A4\uD130 AGY \uD50C\uB7EC\uADF8\uC778\uC744 \uBD88\uB7EC\uC635\uB2C8\uB2E4.");
     await this.loadSettings();
     this.agentService = new AgentService(this);
     this.ensureDefaultWorkspaceFolders().catch((error) => {
-      console.warn("Master of Knowledge AGY could not prepare default workspace folders:", error);
+      console.warn("\uC9C0\uC2DD \uB9C8\uC2A4\uD130 AGY \uAE30\uBCF8 \uC791\uC5C5\uACF5\uAC04 \uD3F4\uB354\uB97C \uC900\uBE44\uD558\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4:", error);
     });
     this.registerView(
       CHAT_VIEW_TYPE,
       (leaf) => new ChatView(leaf, this)
     );
-    this.addRibbonIcon("brain", "Open Master of Knowledge AGY", () => {
+    this.addRibbonIcon("brain", "\uC9C0\uC2DD \uB9C8\uC2A4\uD130 AGY \uC5F4\uAE30", () => {
       this.activateChatView();
     });
     this.addSettingTab(new MokAgySettingTab(this.app, this));
     this.statusBarItem = this.addStatusBarItem();
-    this.updateStatusBar("Ready");
+    this.updateStatusBar("\uC900\uBE44\uB428");
     this.addCommand({
       id: "open-master-of-knowledge-agy",
-      name: "Open Master of Knowledge AGY",
+      name: "\uC9C0\uC2DD \uB9C8\uC2A4\uD130 AGY \uC5F4\uAE30",
       callback: () => {
         this.activateChatView();
       }
     });
   }
   onunload() {
-    console.log("Unloading Master of Knowledge AGY Plugin");
+    console.log("\uC9C0\uC2DD \uB9C8\uC2A4\uD130 AGY \uD50C\uB7EC\uADF8\uC778\uC744 \uC885\uB8CC\uD569\uB2C8\uB2E4.");
   }
   async loadSettings() {
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
@@ -2869,26 +2881,27 @@ var MokAgyPlugin = class extends import_obsidian4.Plugin {
     const folder = skillPath.split("/").slice(0, -1).join("/");
     if (folder) await this.ensureVaultFolder(folder);
     const content = [
-      "# Obsidian Writing Skill",
+      "# Obsidian \uC791\uC131 \uC2A4\uD0AC",
       "",
-      "Use this skill whenever the user asks the Agent to write, compile, summarize, or create an Obsidian note.",
+      "\uC0AC\uC6A9\uC790\uAC00 \uC5D0\uC774\uC804\uD2B8\uC5D0\uAC8C Obsidian \uB178\uD2B8 \uC791\uC131, \uC815\uB9AC, \uC694\uC57D, \uC0DD\uC131\uC744 \uC694\uCCAD\uD560 \uB54C \uC774 \uC2A4\uD0AC\uC744 \uC0AC\uC6A9\uD569\uB2C8\uB2E4.",
       "",
-      "## Output Contract",
-      "- Write valid Markdown that opens cleanly in Obsidian.",
-      "- Prefer clear headings, short paragraphs, tables only when they improve scanning, and actionable checklists.",
-      "- Use wiki links like [[Note Title]] only when the target note exists or when creating a deliberate new note.",
-      "- Keep generated notes inside the configured Agent output folder.",
-      "- When a note file is created, return its vault-relative path and a markdown link to that path.",
-      "- Do not claim a file was saved unless the file was actually written.",
+      "## \uCD9C\uB825 \uADDC\uCE59",
+      "- Obsidian\uC5D0\uC11C \uBC14\uB85C \uC5F4\uB9AC\uB294 \uC62C\uBC14\uB978 Markdown\uC744 \uC791\uC131\uD569\uB2C8\uB2E4.",
+      "- \uBA85\uD655\uD55C \uC81C\uBAA9, \uC9E7\uC740 \uBB38\uB2E8, \uD544\uC694\uD55C \uACBD\uC6B0\uC5D0\uB9CC \uD45C, \uC2E4\uD589 \uAC00\uB2A5\uD55C \uCCB4\uD06C\uB9AC\uC2A4\uD2B8\uB97C \uC6B0\uC120\uD569\uB2C8\uB2E4.",
+      "- [[\uB178\uD2B8 \uC81C\uBAA9]] \uD615\uD0DC\uC758 \uC704\uD0A4\uB9C1\uD06C\uB294 \uB300\uC0C1 \uB178\uD2B8\uAC00 \uC874\uC7AC\uD558\uAC70\uB098 \uC0C8 \uB178\uD2B8\uB97C \uC758\uB3C4\uC801\uC73C\uB85C \uB9CC\uB4E4 \uB54C\uB9CC \uC0AC\uC6A9\uD569\uB2C8\uB2E4.",
+      "- \uC0DD\uC131 \uB178\uD2B8\uB294 \uC124\uC815\uB41C \uC5D0\uC774\uC804\uD2B8 \uACB0\uACFC \uD3F4\uB354 \uC548\uC5D0 \uBCF4\uAD00\uD569\uB2C8\uB2E4.",
+      "- \uB178\uD2B8 \uD30C\uC77C\uC744 \uB9CC\uB4E4\uC5C8\uB2E4\uBA74 vault \uC0C1\uB300 \uACBD\uB85C\uC640 \uD574\uB2F9 \uACBD\uB85C\uC758 Markdown \uB9C1\uD06C\uB97C \uD568\uAED8 \uBC18\uD658\uD569\uB2C8\uB2E4.",
+      "- \uC2E4\uC81C\uB85C \uD30C\uC77C\uC744 \uC4F0\uC9C0 \uC54A\uC558\uB2E4\uBA74 \uC800\uC7A5\uD588\uB2E4\uACE0 \uB9D0\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.",
       "",
-      "## Source Discipline",
-      "- Cite vault note paths when using local context note evidence.",
-      "- Separate note-grounded claims from general suggestions.",
-      "- If evidence is weak or missing, say so plainly.",
+      "## \uCD9C\uCC98 \uADDC\uCE59",
+      "- \uB85C\uCEEC \uBB38\uB9E5 \uB178\uD2B8\uC758 \uADFC\uAC70\uB97C \uC0AC\uC6A9\uD558\uBA74 vault \uB178\uD2B8 \uACBD\uB85C\uB97C \uD45C\uC2DC\uD569\uB2C8\uB2E4.",
+      "- \uB178\uD2B8 \uADFC\uAC70\uAC00 \uC788\uB294 \uC8FC\uC7A5\uACFC \uC77C\uBC18 \uC81C\uC548\uC744 \uAD6C\uBD84\uD569\uB2C8\uB2E4.",
+      "- \uADFC\uAC70\uAC00 \uC57D\uD558\uAC70\uB098 \uC5C6\uC73C\uBA74 \uBD84\uBA85\uD788 \uB9D0\uD569\uB2C8\uB2E4.",
       "",
-      "## Korean Notes",
-      "- If the user writes Korean, answer in natural Korean.",
-      "- Avoid stiff translation tone; write as a practical Obsidian note the user can keep."
+      "## \uD55C\uAD6D\uC5B4 \uADDC\uCE59",
+      "- \uBAA8\uB4E0 \uC124\uBA85, \uC81C\uBAA9, \uBC84\uD2BC\uC5D0 \uB4E4\uC5B4\uAC08 \uC81C\uC548 \uBB38\uAD6C, \uB178\uD2B8 \uBCF8\uBB38\uC740 \uC790\uC5F0\uC2A4\uB7EC\uC6B4 \uD55C\uAD6D\uC5B4\uB85C \uC791\uC131\uD569\uB2C8\uB2E4.",
+      "- \uBA85\uB839\uC5B4, \uD30C\uC77C\uBA85, \uBAA8\uB378\uBA85, API \uC774\uB984 \uAC19\uC740 \uACE0\uC720\uBA85\uC0AC\uB97C \uC81C\uC678\uD558\uACE0 \uC601\uC5B4 \uBB38\uC7A5\uC744 \uC11E\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.",
+      "- \uBC88\uC5ED\uD22C\uB97C \uD53C\uD558\uACE0 \uC0AC\uC6A9\uC790\uAC00 \uADF8\uB300\uB85C \uBCF4\uAD00\uD560 \uC218 \uC788\uB294 \uC2E4\uBB34\uD615 Obsidian \uB178\uD2B8\uB85C \uC791\uC131\uD569\uB2C8\uB2E4."
     ].join("\n");
     const existing = this.app.vault.getAbstractFileByPath(skillPath);
     if (existing instanceof import_obsidian4.TFile) {
