@@ -1,6 +1,6 @@
 {
 	"name": "master-of-knowledge-agy",
-	"version": "2.0.40",
+	"version": "2.0.41",
 	"description": "Antigravity CLI OAuth 에이전트 작업을 사용하는 Obsidian 지식 작업공간",
 	"main": "main.js",
 	"scripts": {

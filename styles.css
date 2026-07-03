@@ -228,14 +228,14 @@
 .mok-graph-wrap {
 	position: relative;
 	flex: 1;
-	min-height: 560px;
+	min-height: 620px;
 	border: 1px solid var(--background-modifier-border);
 	border-radius: 8px;
 	overflow: hidden;
 	background:
-		radial-gradient(circle at center, rgba(255, 255, 255, 0.055) 0 1px, transparent 1px 100%),
+		radial-gradient(circle at center, rgba(255, 255, 255, 0.04) 0 1px, transparent 1px 100%),
 		var(--background-primary);
-	background-size: 18px 18px;
+	background-size: 24px 24px;
 }
 
 .mok-graph-detail {
@@ -354,7 +354,7 @@
 .mok-graph-svg {
 	width: 100%;
 	height: 100%;
-	min-height: 560px;
+	min-height: 620px;
 	display: block;
 	cursor: grab;
 	touch-action: none;
@@ -366,19 +366,19 @@
 }
 
 .mok-graph-edge {
-	stroke: rgba(200, 205, 230, 0.5);
-	stroke-width: 1.25;
+	stroke: rgba(180, 188, 214, 0.38);
+	stroke-width: 1;
 	transition: opacity 160ms ease, stroke 160ms ease, stroke-width 160ms ease;
 	vector-effect: non-scaling-stroke;
 }
 
 .mok-graph-edge-link {
-	stroke: rgba(220, 225, 250, 0.62);
+	stroke: rgba(210, 218, 248, 0.48);
 }
 
 .mok-graph-edge-highlight {
 	stroke: #ffd24b;
-	stroke-width: 2.4;
+	stroke-width: 2.1;
 	opacity: 1;
 }
 
@@ -389,8 +389,8 @@
 
 .mok-graph-node circle {
 	stroke: rgba(255, 255, 255, 0.78);
-	stroke-width: 1.6;
-	filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.35));
+	stroke-width: 1.35;
+	filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.32));
 	transition: stroke 160ms ease, stroke-width 160ms ease, opacity 160ms ease;
 }
 
@@ -401,22 +401,33 @@
 .mok-graph-node:hover circle,
 .mok-graph-node-search-hit circle {
 	stroke: var(--text-accent);
-	stroke-width: 3.5;
+	stroke-width: 2.8;
 }
 
 .mok-graph-node text {
 	fill: var(--text-normal);
-	font-size: 10px;
-	font-weight: 650;
+	font-size: 7.6px;
+	font-weight: 600;
 	paint-order: stroke;
 	stroke: var(--background-primary);
-	stroke-width: 4px;
+	stroke-width: 2.8px;
 	stroke-linejoin: round;
 	pointer-events: none;
+	letter-spacing: 0;
+	opacity: 0.9;
+}
+
+.mok-graph-node text.mok-graph-label-large {
+	font-size: 8.4px;
+	font-weight: 650;
+}
+
+.mok-graph-node text.mok-graph-label-compact {
+	opacity: 0.82;
 }
 
 .mok-graph-faded {
-	opacity: 0.13;
+	opacity: 0.11;
 }
 
 /* ==================== Chat Header ==================== */

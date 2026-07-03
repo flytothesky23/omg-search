@@ -961,7 +961,11 @@ export class ChatView extends ItemView {
 			(options.includeTags || edge.type === 'wikilink')
 		);
 		const edges = this.capGraphEdges(rawEdges, selected, options.includeTags ? 520 : 340, options.includeTags ? 10 : 8);
-		const layout = this.computeForceLayout(selected, edges, container.clientWidth || 1100, 620);
+		const baseWidth = container.clientWidth || 1100;
+		const nodeSpread = Math.sqrt(Math.max(selected.length, 1));
+		const layoutWidth = Math.max(baseWidth, Math.min(1620, 980 + nodeSpread * 48));
+		const layoutHeight = Math.max(660, Math.min(1120, 600 + nodeSpread * 34));
+		const layout = this.computeForceLayout(selected, edges, layoutWidth, layoutHeight);
 		const neighbors = new Map<string, Set<string>>();
 		for (const node of selected) neighbors.set(node.id, new Set());
 		for (const edge of edges) {
@@ -1027,11 +1031,14 @@ export class ChatView extends ItemView {
 			circle.setAttribute('data-node-kind', node.kind);
 			group.appendChild(circle);
 
-			if (pos.r > 12 || isSearchHit) {
+			if (pos.r > 8.5 || isSearchHit || (node.degree || 0) >= 3) {
+				const labelPlacement = this.graphLabelPlacement(pos, layout.width, layout.height);
 				const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-				label.setAttribute('y', String(pos.r + 13));
-				label.setAttribute('text-anchor', 'middle');
-				label.textContent = this.truncateGraphLabel(title, pos.r > 18 ? 18 : 12);
+				label.setAttribute('x', String(labelPlacement.x));
+				label.setAttribute('y', String(labelPlacement.y));
+				label.setAttribute('text-anchor', labelPlacement.anchor);
+				label.setAttribute('class', pos.r > 17 ? 'mok-graph-label-large' : 'mok-graph-label-compact');
+				label.textContent = this.truncateGraphLabel(title, pos.r > 17 ? 30 : pos.r > 12 ? 24 : 18);
 				group.appendChild(label);
 			}
 
@@ -1284,28 +1291,25 @@ export class ChatView extends ItemView {
 		height: number
 	): { width: number; height: number; positions: Map<string, { x: number; y: number; r: number }> } {
 		const safeWidth = Math.max(width, 900);
-		const safeHeight = Math.max(height, 560);
+		const safeHeight = Math.max(height, 640);
 		const positions = new Map<string, { x: number; y: number; vx: number; vy: number; r: number; community: number }>();
 		const communities = Array.from(new Set(nodes.map(node => node.community || 0))).sort((a, b) => a - b);
 		const centerByCommunity = new Map<number, { x: number; y: number }>();
 		const communityCounts = new Map<number, number>();
 		for (const node of nodes) communityCounts.set(node.community || 0, (communityCounts.get(node.community || 0) || 0) + 1);
-		const topCommunities = new Set(
-			Array.from(communityCounts.entries())
-				.sort((a, b) => b[1] - a[1])
-				.slice(0, 12)
-				.map(([community]) => community)
-		);
-		const ring = Math.min(safeWidth, safeHeight) * 0.18;
-		communities.forEach((community, index) => {
-			const centerSeed = this.graphSeed(`community:${community}`);
-			const angle = centerSeed * Math.PI * 2;
-			const radial = topCommunities.has(community) ? ring : ring * 0.45;
+		const sortedCommunities = Array.from(communityCounts.entries())
+			.sort((a, b) => b[1] - a[1] || a[0] - b[0])
+			.map(([community]) => community);
+		const topCommunities = new Set(sortedCommunities.slice(0, 12));
+		const ring = Math.min(safeWidth, safeHeight) * 0.31;
+		const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+		sortedCommunities.forEach((community, index) => {
+			const angle = -Math.PI / 2 + index * goldenAngle;
+			const radial = topCommunities.has(community) ? ring : ring * 0.68;
 			centerByCommunity.set(community, {
 				x: safeWidth / 2 + Math.cos(angle) * radial,
-				y: safeHeight / 2 + Math.sin(angle) * radial * 0.68
+				y: safeHeight / 2 + Math.sin(angle) * radial * 0.78
 			});
-			void index;
 		});
 
 		nodes.forEach((node, index) => {
@@ -1313,16 +1317,16 @@ export class ChatView extends ItemView {
 			const center = centerByCommunity.get(community) || { x: safeWidth / 2, y: safeHeight / 2 };
 			const seed = this.graphSeed(node.id);
 			const angle = seed * Math.PI * 2;
-			const radius = 26 + ((index % 13) * 7);
+			const radius = 44 + ((index % 17) * 11);
 			const nodeRadius = node.kind === 'tag'
-				? 7 + Math.min(node.degree || 0, 35) * 0.16
-				: 6 + Math.sqrt(Math.max(0, node.pageRank || 0)) * 20 + Math.min(node.degree || 0, 40) * 0.12;
+				? 5 + Math.min(node.degree || 0, 35) * 0.12
+				: 5 + Math.sqrt(Math.max(0, node.pageRank || 0)) * 15 + Math.min(node.degree || 0, 40) * 0.08;
 			positions.set(node.id, {
 				x: center.x + Math.cos(angle) * radius,
 				y: center.y + Math.sin(angle) * radius,
 				vx: 0,
 				vy: 0,
-				r: Math.max(5, Math.min(26, nodeRadius)),
+				r: Math.max(4.5, Math.min(node.kind === 'tag' ? 12 : 22, nodeRadius)),
 				community
 			});
 		});
@@ -1330,8 +1334,8 @@ export class ChatView extends ItemView {
 		const visibleEdges = edges
 			.filter(edge => positions.has(edge.from) && positions.has(edge.to))
 			.slice(0, 420);
-		for (let iter = 0; iter < 180; iter++) {
-			const alpha = 1 - iter / 180;
+		for (let iter = 0; iter < 260; iter++) {
+			const alpha = 1 - iter / 260;
 			for (let i = 0; i < nodes.length; i++) {
 				const a = positions.get(nodes[i].id);
 				if (!a) continue;
@@ -1340,8 +1344,8 @@ export class ChatView extends ItemView {
 					if (!b) continue;
 					const dx = a.x - b.x;
 					const dy = a.y - b.y;
-					const distSq = Math.max(dx * dx + dy * dy, 220);
-					const force = (a.community === b.community ? 320 : 620) / distSq;
+					const distSq = Math.max(dx * dx + dy * dy, 420);
+					const force = (a.community === b.community ? 760 : 1180) / distSq;
 					const fx = dx * force * alpha;
 					const fy = dy * force * alpha;
 					a.vx += fx;
@@ -1357,8 +1361,8 @@ export class ChatView extends ItemView {
 				const dx = b.x - a.x;
 				const dy = b.y - a.y;
 				const dist = Math.max(Math.sqrt(dx * dx + dy * dy), 1);
-				const desired = edge.type === 'wikilink' ? 105 : 150;
-				const force = (dist - desired) * (edge.type === 'wikilink' ? 0.006 : 0.003) * alpha;
+				const desired = edge.type === 'wikilink' ? 142 : 190;
+				const force = (dist - desired) * (edge.type === 'wikilink' ? 0.0045 : 0.0025) * alpha;
 				const fx = (dx / dist) * force;
 				const fy = (dy / dist) * force;
 				a.vx += fx;
@@ -1368,10 +1372,10 @@ export class ChatView extends ItemView {
 			}
 			for (const item of positions.values()) {
 				const center = centerByCommunity.get(item.community) || { x: safeWidth / 2, y: safeHeight / 2 };
-				item.vx += (center.x - item.x) * 0.009 * alpha;
-				item.vy += (center.y - item.y) * 0.009 * alpha;
-				item.vx += (safeWidth / 2 - item.x) * 0.0025 * alpha;
-				item.vy += (safeHeight / 2 - item.y) * 0.0025 * alpha;
+				item.vx += (center.x - item.x) * 0.0055 * alpha;
+				item.vy += (center.y - item.y) * 0.0055 * alpha;
+				item.vx += (safeWidth / 2 - item.x) * 0.0014 * alpha;
+				item.vy += (safeHeight / 2 - item.y) * 0.0014 * alpha;
 				item.x += item.vx;
 				item.y += item.vy;
 				item.vx *= 0.72;
@@ -1385,11 +1389,11 @@ export class ChatView extends ItemView {
 		const maxX = Math.max(...raw.map(item => item.x + item.r));
 		const minY = Math.min(...raw.map(item => item.y - item.r));
 		const maxY = Math.max(...raw.map(item => item.y + item.r));
-		const padding = 58;
+		const padding = 88;
 		const scale = Math.min(
 			(safeWidth - padding * 2) / Math.max(maxX - minX, 1),
 			(safeHeight - padding * 2) / Math.max(maxY - minY, 1),
-			1.25
+			1.08
 		);
 		for (const [id, item] of positions.entries()) {
 			output.set(id, {
@@ -1399,6 +1403,29 @@ export class ChatView extends ItemView {
 			});
 		}
 		return { width: safeWidth, height: safeHeight, positions: output };
+	}
+
+	private graphLabelPlacement(
+		pos: { x: number; y: number; r: number },
+		width: number,
+		height: number
+	): { x: number; y: number; anchor: 'start' | 'middle' | 'end' } {
+		const dx = pos.x - width / 2;
+		const dy = pos.y - height / 2;
+		if (Math.abs(dx) > Math.abs(dy) * 0.85 && Math.abs(dx) > width * 0.08) {
+			const sign = dx > 0 ? 1 : -1;
+			return {
+				x: sign * (pos.r + 7),
+				y: 3,
+				anchor: sign > 0 ? 'start' : 'end'
+			};
+		}
+		const sign = dy > 0 ? 1 : -1;
+		return {
+			x: 0,
+			y: sign > 0 ? pos.r + 10 : -pos.r - 7,
+			anchor: 'middle'
+		};
 	}
 
 	private communityGraphColor(community: number): string {
